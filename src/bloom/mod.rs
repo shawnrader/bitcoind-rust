@@ -1,6 +1,18 @@
 
-mod Bloom {
+use super::script::{opcodetype, standard::TxoutType};
+use super::hash::MurmurHash3;
+use super::primitives::transaction::{COutPoint, CTransaction, CTxOut};
+use super::streams::CDataStream;
+use super::serialize::SER;
+use super::version::PROTOCOL_VERSION;
+use primitive_types::H256;
 
+/// 20,000 items with fp rate < 0.1% or 10,000 items and <0.0001%
+const MAX_BLOOM_FILTER_SIZE: u32 = 36000; // bytes
+const MAX_HASH_FUNCS: u32 = 50;
+
+/// First two bits of nFlags control how much IsRelevantAndUpdate actually updates
+/// The remaining bits are reserved
 enum bloomflags
 {
     BLOOM_UPDATE_NONE = 0,
@@ -10,7 +22,7 @@ enum bloomflags
     BLOOM_UPDATE_MASK = 3,
 }
 
-struct BloomFilter {
+struct CBloomFilter {
     vData: Vec<u8>,
     nHashFuncs: u32,
     nTweak: u32,
@@ -18,49 +30,168 @@ struct BloomFilter {
 }
 
 
-impl BloomFilter {
+impl CBloomFilter {
     //SERIALIZE_METHODS(CBloomFilter, obj) { READWRITE(obj.vData, obj.nHashFuncs, obj.nTweak, obj.nFlags); }
 
     // inline unsigned int CBloomFilter::Hash(unsigned int nHashNum, Span<const unsigned char> vDataToHash) const
-    fn Hash(nHashNum:u32, vDataToHash: Span<u8>) -> i32
+    fn Hash(self, nHashNum:u32, vDataToHash: Vec<u8>) -> u32
     {
         // 0xFBA4C795 chosen as it guarantees a reasonable bit difference between nHashNum values.
-        return MurmurHash3(nHashNum * 0xFBA4C795 + nTweak, vDataToHash) % (vData.size() * 8);
+        return MurmurHash3(nHashNum * 0xFBA4C795 + self.nTweak, vDataToHash) % (self.vData.len() as u32 * 8);
     }
 
     //void insert(Span<const unsigned char> vKey);
-    pub fn insert(self, vKey: u8) {
-        if (self.vData.empty()) {// Avoid divide-by-zero (CVE-2013-5700)
+    pub fn insert_span(self, vKey: Vec<u8>) {
+        // Avoid divide-by-zero (CVE-2013-5700)
+        if self.vData.len() == 0
+        {
             return;
         }
         //for (unsigned int i = 0; i < nHashFuncs; i++)
-        for i in (0..self.nHashFuncs)
+        for i in 0..self.nHashFuncs
         {
-            let nIndex: u32 = Hash(i, vKey);
+            let nIndex: u32 = self.Hash(i, vKey);
             // Sets bit nIndex of vData
-            vData[self.nIndex >> 3] |= (1 << (7 & self.nIndex));
+            self.vData[nIndex as usize>> 3] |= 1 << (7 & nIndex);
         }
     }
 
     //void insert(const COutPoint& outpoint);
-    pub fn insert(outpoint: &COutPoint);
+    pub fn insert(self, outpoint: &COutPoint)
+    {
+        let stream = CDataStream::new(SER::NETWORK, PROTOCOL_VERSION);
+        stream << outpoint;
+        //self.insert(MakeUCharSpan(stream));
+    }
 
     //bool contains(Span<const unsigned char> vKey) const;
-    pub fn contains(vKey: Span<u8>) -> bool;
+    pub fn contains_slice(self, vKey: &[u8]) -> bool {
+        // Avoid divide-by-zero (CVE-2013-5700)
+        if self.vData.len() == 0
+        {
+            return true;
+        }
+
+        for i in 0..self.nHashFuncs
+        {
+            // SHAWN: optimize this so we don't have to copy the vector
+            let nIndex: u32 = self.Hash(i, vKey.try_into().unwrap());
+            // Checks bit nIndex of vData
+            if (self.vData[nIndex as usize >> 3] & (1 << (7 & nIndex))) != 0
+            {
+                return false;
+            }
+        }
+        return true;
+    }
 
     //bool contains(const COutPoint& outpoint) const;
-    pub fn contains(outpoint: OutPoint) -> bool;
+    pub fn contains(self, outpoint: &COutPoint) -> bool {
+        let stream = CDataStream::new(SER::NETWORK, PROTOCOL_VERSION);
+        stream << outpoint;
+        //return self.contains_slice(MakeUCharSpan(stream));
+        false
+    }
 
     /// True if the size is <= MAX_BLOOM_FILTER_SIZE and the number of hash functions is <= MAX_HASH_FUNCS
     /// (catch a filter which was just deserialized which was too big)
     //bool IsWithinSizeConstraints() const;
-    pub fn is_in_size_contraints(self) -> bool;
+    pub fn IsWithinSizeConstraints(self) -> bool {
+        return self.vData.len() <= MAX_BLOOM_FILTER_SIZE as usize && self.nHashFuncs <= MAX_HASH_FUNCS;
+    }
 
     /// Also adds any outputs which match the filter to the filter (to match their spending txes)
     //bool IsRelevantAndUpdate(const CTransaction& tx);
-    pub fn is_relevant_and_update(tx: &CTransaction) -> bool;
+    pub fn IsRelevantAndUpdate(self, tx: &CTransaction) -> bool
+    {
+        let mut fFound:bool = false;
+        // Match if the filter contains the hash of tx
+        //  for finding tx when they appear in a block
+        if self.vData.is_empty() { // zero-size = "match-all" filter
+            return true;
+        }
+        let hash: &H256 = tx.GetHash();
+        if self.contains_slice(hash.as_bytes()) {
+            fFound = true;
+        }
 
 
-}
+        for i in 0..tx.vout.len()
+        {
+            let txout: &CTxOut = &tx.vout[i];
+            // Match if the filter contains any arbitrary script data element in any scriptPubKey in tx
+            // If this matches, also add the specific output that was matched.
+            // This means clients don't have to update the filter themselves when a new relevant tx
+            // is discovered in order to find spending transactions, which avoids round-tripping and race conditions.
+            let mut pc = &txout.scriptPubKey.v[0..];
+            //std::vector<unsigned char> data;
+            let mut data:&[u8];
+            //while (pc < txout.scriptPubKey.end())
+            while pc.len() > 0
+            {
+                let mut opcode: opcodetype;
+
+                //if !txout.scriptPubKey.GetOp(pc, opcode, data)
+                //{
+                //    break;
+                //}
+                (opcode, pc, data) = txout.scriptPubKey.GetOp(pc).unwrap();
+
+                if data.len() != 0 && self.contains_slice(data)
+                {
+                    fFound = true;
+                    if (self.nFlags & bloomflags::BLOOM_UPDATE_MASK as u8) == bloomflags::BLOOM_UPDATE_ALL as u8
+                    {
+                        let cout = COutPoint{hash: *hash, n: i as u32};
+                        self.insert(&cout);
+                    }
+                    else if (self.nFlags & bloomflags::BLOOM_UPDATE_MASK as u8) == bloomflags::BLOOM_UPDATE_P2PUBKEY_ONLY as u8
+                    {
+                        let mut vSolutions: Vec<Vec<u8>>;
+                        let txout_type: TxoutType = Solver(txout.scriptPubKey, vSolutions);
+                        if txout_type == TxoutType::PUBKEY || txout_type == TxoutType::MULTISIG
+                        {
+                            self.insert(COutPoint(hash, i));
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+    
+        if fFound
+        {
+            return true;
+        }
+    
+        for txin in tx.vin.iter()
+        {
+            // Match if the filter contains an outpoint tx spends
+            if self.contains(txin.prevout)
+            {
+                return true;
+            }
+
+            // Match if the filter contains any arbitrary script data element in any scriptSig in tx
+            let pc = txin.scriptSig.iter();
+            let mut data: Vec<u8>;
+            for pc in txin.scriptSig.iter()
+            {
+                let mut opcode: opcodetype;
+                if !txin.scriptSig.GetOp(pc, opcode, data)
+                {
+                    break;
+                }
+                if data.len() != 0 && self.contains_slice(data)
+                {
+                    return true;
+                }
+            }
+        }
+    
+        return false;
+    
+    }
+
 
 }
