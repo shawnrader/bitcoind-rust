@@ -6,7 +6,9 @@
 use crate::script::CScript;
 use crate::script::interpreter::*;
 use crate::script::opcodetype;
+use crate::pubkey;
 
+#[derive(PartialEq)]
 pub enum TxoutType {
     NONSTANDARD,
     // 'standard' transaction types:
@@ -24,22 +26,25 @@ pub enum TxoutType {
 }
 
 //static bool MatchPayToPubkey(const CScript& script, valtype& pubkey)
-fn MatchPayToPubkey(script: &CScript, pubkey: &valtype) -> bool
+fn MatchPayToPubkey(script: &CScript, pubkey: &mut valtype) -> bool
 {
-    if (script.v.len() == CPubKey::SIZE + 2 && script[0] == CPubKey::SIZE && script.back() == OP_CHECKSIG) {
-        pubkey = valtype(script.begin() + 1, script.begin() + CPubKey::SIZE + 1);
-        return CPubKey::ValidSize(pubkey);
+    if script.v.len() == pubkey::SIZE + 2 && script.v[0] == pubkey::SIZE as u8 && *script.v.last().unwrap() == opcodetype::OP_CHECKSIG as u8
+    {
+        //pubkey = valtype(script.begin() + 1, script.begin() + pubkey::SIZE + 1);
+        pubkey.copy_from_slice(&script.v[0..pubkey::SIZE + 1]);
+        return pubkey::ValidSize(pubkey);
     }
-    if (script.size() == CPubKey::COMPRESSED_SIZE + 2 && script[0] == CPubKey::COMPRESSED_SIZE && script.back() == OP_CHECKSIG) {
-        pubkey = valtype(script.begin() + 1, script.begin() + CPubKey::COMPRESSED_SIZE + 1);
-        return CPubKey::ValidSize(pubkey);
+    if script.v.len() == pubkey::COMPRESSED_SIZE + 2 && script.v[0] == pubkey::COMPRESSED_SIZE as u8 && script.v.last().unwrap() == opcodetype::OP_CHECKSIG
+    {
+        //pubkey = valtype(script.begin() + 1, script.begin() + pubkey::COMPRESSED_SIZE + 1);
+        pubkey.copy_from_slice(&script.v[1..pubkey::COMPRESSED_SIZE + 1]);
+        return pubkey::ValidSize(pubkey);
     }
     return false;
 }
 
-
 //TxoutType Solver(const CScript& scriptPubKey, std::vector<std::vector<unsigned char>>& vSolutionsRet)
-fn Solver(scriptPubKey: &CScript, vSolutionsRet: &mut Vec<Vec<u8>>) -> TxoutType
+pub fn Solver(scriptPubKey: &CScript, vSolutionsRet: &mut Vec<Vec<u8>>) -> TxoutType
 {
     vSolutionsRet.clear();
  
@@ -50,7 +55,7 @@ fn Solver(scriptPubKey: &CScript, vSolutionsRet: &mut Vec<Vec<u8>>) -> TxoutType
         //std::vector<unsigned char> hashBytes(scriptPubKey.begin()+2, scriptPubKey.begin()+22);
         let hashBytes: &[u8] = &scriptPubKey.v[2..22];
         vSolutionsRet.push(hashBytes.to_vec());
-        TxoutType::SCRIPTHASH
+        return TxoutType::SCRIPTHASH;
     }
     let mut witnessversion: u32;
     let mut witnessprogram: Vec<u8>;
@@ -58,17 +63,17 @@ fn Solver(scriptPubKey: &CScript, vSolutionsRet: &mut Vec<Vec<u8>>) -> TxoutType
         if witnessversion == 0 && witnessprogram.len() == WITNESS_V0_KEYHASH_SIZE {
             //vSolutionsRet.push_back(std::move(witnessprogram));
             vSolutionsRet.push(witnessprogram);
-            (TxoutType::WITNESS_V0_KEYHASH, vSolutionsRet);
+            TxoutType::WITNESS_V0_KEYHASH
         }
-        if (witnessversion == 0 && witnessprogram.len() == WITNESS_V0_SCRIPTHASH_SIZE) {
+        if witnessversion == 0 && witnessprogram.len() == WITNESS_V0_SCRIPTHASH_SIZE {
             vSolutionsRet.append(witnessprogram);
             (TxoutType::WITNESS_V0_SCRIPTHASH, vSolutionsRet)
         }
-        if (witnessversion == 1 && witnessprogram.len() == WITNESS_V1_TAPROOT_SIZE) {
+        if witnessversion == 1 && witnessprogram.len() == WITNESS_V1_TAPROOT_SIZE {
             vSolutionsRet.push(witnessprogram);
             (TxoutType::WITNESS_V1_TAPROOT, vSolutionsRet)
         }
-        if (witnessversion != 0) {
+        if witnessversion != 0 {
             //vSolutionsRet.push_back(std::vector<unsigned char>{(unsigned char)witnessversion});
             let wv = vec![witnessversion as u8];
             vSolutionsRet.push(wv);
@@ -89,23 +94,26 @@ fn Solver(scriptPubKey: &CScript, vSolutionsRet: &mut Vec<Vec<u8>>) -> TxoutType
     }
 
     let mut data: Vec<u8>;
-    if (MatchPayToPubkey(scriptPubKey, data)) {
-        vSolutionsRet.push_back(std::move(data));
+    if MatchPayToPubkey(scriptPubKey, data) {
+        vSolutionsRet.push_back(data);
         return TxoutType::PUBKEY;
     }
 
-    if (MatchPayToPubkeyHash(scriptPubKey, data)) {
-        vSolutionsRet.push_back(std::move(data));
+    if MatchPayToPubkeyHash(scriptPubKey, data) {
+        vSolutionsRet.push_back(data);
         return TxoutType::PUBKEYHASH;
     }
 
     let mut required: i32;
     //std::vector<std::vector<unsigned char>> keys;
-    let mut keys: Vec<Vec<u8>;
-    if (MatchMultisig(scriptPubKey, required, keys)) {
-        vSolutionsRet.push_back({static_cast<unsigned char>(required)}); // safe as required is in range 1..20
-        vSolutionsRet.insert(vSolutionsRet.end(), keys.begin(), keys.end());
-        vSolutionsRet.push_back({static_cast<unsigned char>(keys.size())}); // safe as size is in range 1..20
+    let mut keys: Vec<Vec<u8>>;
+    if MatchMultisig(scriptPubKey, required, keys) {
+        //vSolutionsRet.push_back({static_cast<unsigned char>(required)}); // safe as required is in range 1..20
+        vSolutionsRet.push(vec![required as u8]); // safe as required is in range 1..20
+        //vSolutionsRet.insert(vSolutionsRet.end(), keys.begin(), keys.end());
+        vSolutionsRet.extend_from_slice(&keys[0..]);
+        //vSolutionsRet.push_back({static_cast<unsigned char>(keys.size())}); // safe as size is in range 1..20
+        vSolutionsRet.push(vec![keys.len() as u8]);
         return TxoutType::MULTISIG;
     }
 

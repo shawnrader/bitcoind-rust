@@ -445,7 +445,7 @@ impl CScript
     {
         if self.v.len() < 4 || self.v.len() > 42
         {
-            False
+            false
         }
         if self.v[0] != opcodetype::OP_0 as u8 &&
            (self.v[0] < opcodetype::OP_1 as u8 ||

@@ -1,5 +1,5 @@
 
-use super::script::{opcodetype, standard::TxoutType};
+use super::script::{opcodetype, standard::TxoutType, standard::Solver};
 use super::hash::MurmurHash3;
 use super::primitives::transaction::{COutPoint, CTransaction, CTxOut};
 use super::streams::CDataStream;
@@ -148,10 +148,10 @@ impl CBloomFilter {
                     else if (self.nFlags & bloomflags::BLOOM_UPDATE_MASK as u8) == bloomflags::BLOOM_UPDATE_P2PUBKEY_ONLY as u8
                     {
                         let mut vSolutions: Vec<Vec<u8>>;
-                        let txout_type: TxoutType = Solver(txout.scriptPubKey, vSolutions);
+                        let txout_type: TxoutType = Solver(&txout.scriptPubKey, &mut vSolutions);
                         if txout_type == TxoutType::PUBKEY || txout_type == TxoutType::MULTISIG
                         {
-                            self.insert(COutPoint(hash, i));
+                            self.insert(&COutPoint { hash: *hash, n:i as u32 } );
                         }
                     }
                     break;
@@ -167,15 +167,15 @@ impl CBloomFilter {
         for txin in tx.vin.iter()
         {
             // Match if the filter contains an outpoint tx spends
-            if self.contains(txin.prevout)
+            if self.contains(&txin.prevout)
             {
                 return true;
             }
 
             // Match if the filter contains any arbitrary script data element in any scriptSig in tx
-            let pc = txin.scriptSig.iter();
+            let pc = txin.scriptSig.v.iter();
             let mut data: Vec<u8>;
-            for pc in txin.scriptSig.iter()
+            for pc in txin.scriptSig.v.iter()
             {
                 let mut opcode: opcodetype;
                 if !txin.scriptSig.GetOp(pc, opcode, data)

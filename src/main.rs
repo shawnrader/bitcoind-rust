@@ -7,6 +7,7 @@ pub mod streams;
 pub mod serialize;
 pub mod version;
 pub mod consensus;
+pub mod pubkey;
 
 fn main() {
     println!("Hello, world!");

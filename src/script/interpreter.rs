@@ -1,5 +1,5 @@
 
-type valtype = Vec<u8>;
+pub type valtype = Vec<u8>;
 
 /* Signature hash sizes */
 pub const WITNESS_V0_SCRIPTHASH_SIZE: usize = 32;
