@@ -51,10 +51,13 @@ fn MatchMultisig(script: &CScript, required_sigs: &mut i32, pubkeys: &Vec<valtyp
     let opcode: opcodetype;
     let data: valtype;
 
-    CScript::const_iterator it = script.begin();
-    if (script.size() < 1 || script.back() != OP_CHECKMULTISIG) return false;
+    //CScript::const_iterator it = script.begin();
+    if script.v.len() < 1 || script.v.last() != opcodetype::OP_CHECKMULTISIG
+    {
+        return false;
+    }
 
-    if (!script.GetOp(it, opcode, data)) return false;
+    if !script.GetOp(it, opcode, data) return false;
     auto req_sigs = GetScriptNumber(opcode, data, 1, MAX_PUBKEYS_PER_MULTISIG);
     if (!req_sigs) return false;
     required_sigs = *req_sigs;
