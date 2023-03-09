@@ -26,7 +26,7 @@ pub enum TxoutType {
 }
 
 //typedef std::vector<unsigned char> valtype;
-type valtype = Vec<u8>;
+type valtype = &[u8];
 
 //static bool MatchPayToPubkey(const CScript& script, valtype& pubkey)
 fn MatchPayToPubkey(script: &CScript, pubkey: &mut valtype) -> bool
@@ -46,10 +46,47 @@ fn MatchPayToPubkey(script: &CScript, pubkey: &mut valtype) -> bool
     return false;
 }
 
+fn MatchPayToPubkeyHash(script: &CScript, pubkeyhash: &valtype) -> bool
+{
+    if script.len() == 25 && script.v[0] == opcodetype::OP_DUP && script.v[1] == opcodetype::OP_HASH160 &&
+        script.v[2] == 20 && script.v[23] == opcodetype::OP_EQUALVERIFY && script.v[24] == opcodetype::OP_CHECKSIG {
+        pubkeyhash = script.v[3..23];
+        return true;
+    }
+    return false;
+}
+
+/** Test for "small positive integer" script opcodes - OP_1 through OP_16. */
+fn IsSmallInteger(opcode: opcodetype) -> bool
+{
+    return opcode >= opcodetype::OP_1 && opcode <= opcodetype::OP_16;
+}
+
+/** Retrieve a minimally-encoded number in range [min,max] from an (opcode, data) pair,
+ *  whether it's OP_n or through a push. */
+//static std::optional<int> GetScriptNumber(opcodetype opcode, valtype data, int min, int max)
+fn GetScriptNumber(opcode: opcodetype, data: valtype, min: i32, max: i32) -> Option<i32>
+{
+    let count: i32;
+    if IsSmallInteger(opcode) {
+        count = CScript::DecodeOP_N(opcode);
+    } else if IsPushdataOp(opcode) {
+        if !CheckMinimalPush(data, opcode) { None }
+        count = CScriptNum:new(data, /* fRequireMinimal = */ true).getint()?;
+
+    } else {
+        return {};
+    }
+    if count < min || count > max { None };
+
+    Some(count);
+}
+
 fn MatchMultisig(script: &CScript, required_sigs: &mut i32, pubkeys: &Vec<valtype>) -> bool
 {
     let opcode: opcodetype;
     let data: valtype;
+    let it = script.v.as_slice();
 
     //CScript::const_iterator it = script.begin();
     if script.v.len() < 1 || script.v.last() != opcodetype::OP_CHECKMULTISIG
@@ -57,16 +94,26 @@ fn MatchMultisig(script: &CScript, required_sigs: &mut i32, pubkeys: &Vec<valtyp
         return false;
     }
 
-    if !script.GetOp(it, opcode, data) return false;
-    auto req_sigs = GetScriptNumber(opcode, data, 1, MAX_PUBKEYS_PER_MULTISIG);
-    if (!req_sigs) return false;
-    required_sigs = *req_sigs;
-    while (script.GetOp(it, opcode, data) && CPubKey::ValidSize(data)) {
-        pubkeys.emplace_back(std::move(data));
+    if !script.GetOp(it, opcode, data) {
+        false
     }
-    auto num_keys = GetScriptNumber(opcode, data, required_sigs, MAX_PUBKEYS_PER_MULTISIG);
-    if (!num_keys) return false;
-    if (pubkeys.size() != static_cast<unsigned long>(*num_keys)) return false;
+    let req_sigs = GetScriptNumber(opcode, data, 1, MAX_PUBKEYS_PER_MULTISIG);
+    if (!req_sigs) {
+        false
+    }
+    required_sigs = *req_sigs;
+    while script.GetOp(it, opcode, data) && CPubKey::ValidSize(data)
+    {
+        pubkeys.push(data);
+    }
+    let num_keys = GetScriptNumber(opcode, data, required_sigs, MAX_PUBKEYS_PER_MULTISIG);
+    if !num_keys
+    {
+        false
+    }
+    if pubkeys.len() != *num_keys as usize {
+        false
+    }
 
     return (it + 1 == script.end());
 }

@@ -186,10 +186,108 @@ pub enum opcodetype
 const OP_FALSE: opcodetype = opcodetype::OP_0;
 const OP_TRUE: opcodetype = opcodetype::OP_1;
 
+/**
+ * Numeric opcodes (OP_1ADD, etc) are restricted to operating on 4-byte integers.
+ * The semantics are subtle, though: operands must be in the range [-2^31 +1...2^31 -1],
+ * but results may overflow (and are valid as long as they are not used in a subsequent
+ * numeric operation). CScriptNum enforces those semantics by storing results as
+ * an int64 and allowing out-of-range values to be returned as a vector of bytes but
+ * throwing an exception if arithmetic is done or the result is interpreted as an integer.
+ */
+struct CScriptNum {
+    m_value: i64,
+}
+
+impl CScriptNum {
+    const nDefaultMaxNumSize: usize = 4;
+
+    pub fn from_vch(self, vch: &Vec<u8>, fRequireMinimal: bool, nSize: Option<usize>) -> Result<Self, String>
+    {
+        let nMaxNumSize = nSize.unwrap_or(self.nDefaultMaxNumSize);
+        if vch.len() > nMaxNumSize {
+            Err("script number overflow")
+        }
+        if (fRequireMinimal && vch.size() > 0) {
+        // Check that the number is encoded with the minimum possible
+        // number of bytes.
+        //
+        // If the most-significant-byte - excluding the sign bit - is zero
+        // then we're not minimal. Note how this test also rejects the
+        // negative-zero encoding, 0x80.
+        if ((vch.back() & 0x7f) == 0) {
+        // One exception: if there's more than one byte and the most
+        // significant bit of the second-most-significant-byte is set
+        // it would conflict with the sign bit. An example of this case
+        // is +-255, which encode to 0xff00 and 0xff80 respectively.
+        // (big-endian).
+        if vch.len() <= 1 || (vch[vch.len() - 2] & 0x80) == 0 {
+            Err("non-minimally encoded script number");
+        }
+        }
+        }
+        self.m_value = self.set_vch(vch);
+        Ok(self)
+    }
+
+    pub fn GetInt64(self) -> i64 { return self.m_value; }
+
+    pub fn getvch(self) -> Vec<u8>
+    {
+        return self.serialize(self.m_value);
+    }
+
+    //static std::vector<unsigned char> serialize(const int64_t& value)
+    pub fn serialize(self, value: i64) -> Vec<u8>
+    {
+        let mut result: Vec<u8> = Vec::new();
+
+        if value == 0
+        {
+            result
+        }
+
+        let neg: bool = value < 0;
+        let absvalue: u64 = if neg { !(value as u64) + 1 } else { value as u64 };
+
+        while absvalue != 0
+        {
+            result.push((absvalue & 0xff) as u8);
+            absvalue >>= 8;
+        }
+
+//    - If the most significant byte is >= 0x80 and the value is positive, push a
+//    new zero-byte to make the significant byte < 0x80 again.
+
+//    - If the most significant byte is >= 0x80 and the value is negative, push a
+//    new 0x80 byte that will be popped off when converting to an integral.
+
+//    - If the most significant byte is < 0x80 and the value is negative, add
+//    0x80 to it, since it will be subtracted and interpreted as a negative when
+//    converting to an integral.
+
+        if result.last() & 0x80
+        {
+            if neg {
+                result.push(0x80);
+            }
+            else {
+                result.push(0);
+            }
+        }
+        else if neg {
+            let last = result.last_mut().unwrap();
+            *last |= 0x80;
+        }
+
+        return result;
+    }
+
+}
+
 
 //bool GetScriptOp(CScriptBase::const_iterator& pc, CScriptBase::const_iterator end, opcodetype& opcodeRet, std::vector<unsigned char>* pvchRet)
 /// Return opcode, slice to start of next op, slice to push data
-fn GetScriptOp(pc: &[u8]) -> Result<(opcodetype, &[u8], &[u8]), bool>
+fn GetScriptOp(pc: &mut [u8], opcodeRet: &mut opcodetype, pvchRet: &mut Vec<u8>) -> bool
 {
     let mut opcodeRet: opcodetype = OP_INVALIDOPCODE;
     let mut slice = pc;
@@ -198,7 +296,7 @@ fn GetScriptOp(pc: &[u8]) -> Result<(opcodetype, &[u8], &[u8]), bool>
     //if (pvchRet)
     //    pvchRet->clear();
     if pc.is_empty() {
-        Err(false)
+        false
     }
 
     // Read instruction
@@ -219,7 +317,7 @@ fn GetScriptOp(pc: &[u8]) -> Result<(opcodetype, &[u8], &[u8]), bool>
         {
             if slice.size() < 1
             {
-                Err(false)
+                false
             }
             //nSize = *pc++;
             nSize = *slice;
@@ -227,9 +325,9 @@ fn GetScriptOp(pc: &[u8]) -> Result<(opcodetype, &[u8], &[u8]), bool>
         }
         else if opcode == OP_PUSHDATA2
         {
-            if slice.size() < 2
+            if slice.len() < 2
             {
-                Err(false)
+                false
             }
             //nSize = ReadLE16(&pc[0]);
             nSize = u32::from(u16::from_le_bytes(slice[0..2]));
@@ -238,9 +336,9 @@ fn GetScriptOp(pc: &[u8]) -> Result<(opcodetype, &[u8], &[u8]), bool>
         }
         else if opcode == OP_PUSHDATA4
         {
-            if slice.size() < 4
+            if slice.len() < 4
             {
-                Err(false)
+                false
             }
             //nSize = ReadLE32(&pc[0]);
             nSize = u32::from_le_bytes(slice[0..2]);
@@ -249,9 +347,9 @@ fn GetScriptOp(pc: &[u8]) -> Result<(opcodetype, &[u8], &[u8]), bool>
         }
         //if (end - pc < 0 || (unsigned int)(end - pc) < nSize)
         //    return false;
-        if slice.size() < nSize
+        if slice.len() < nSize
         {
-            Err(false)
+            false
         }
         
         //if (pvchRet)
@@ -260,8 +358,11 @@ fn GetScriptOp(pc: &[u8]) -> Result<(opcodetype, &[u8], &[u8]), bool>
     }
 
     //opcodeRet = static_cast<opcodetype>(opcode);
+    pvchRet.copy_from_slice(slice[0..nSize as usize]);
+    pc = slice[nSize as usize..];
+    *opcodeRet = opcode
     //return true;
-    Ok((opcode, slice, &slice[nSize as usize..]))
+    //Ok((opcode, slice, &slice[nSize as usize..]))
 }
 
 /**
@@ -331,10 +432,9 @@ impl CScript
     {
         return GetScriptOp(pc, end(), opcodeRet, &vchRet);
     }*/
-
-    pub fn GetOp(self, pc: &[u8]) -> Result<(opcodetype, &[u8], &[u8]), bool>
+    pub fn GetScriptOp(pc: &mut [u8], opcodeRet: &mut opcodetype, pvchRet: &mut Vec<u8>) -> bool
     {
-        GetScriptOp(pc)
+        GetScriptOp(pc, opcodeRet, pvchRet)
     }
 
     //bool GetOp(const_iterator& pc, opcodetype& opcodeRet) const
