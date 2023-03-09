@@ -25,6 +25,9 @@ pub enum TxoutType {
     WITNESS_UNKNOWN,
 }
 
+//typedef std::vector<unsigned char> valtype;
+type valtype = Vec<u8>;
+
 //static bool MatchPayToPubkey(const CScript& script, valtype& pubkey)
 fn MatchPayToPubkey(script: &CScript, pubkey: &mut valtype) -> bool
 {
@@ -41,6 +44,28 @@ fn MatchPayToPubkey(script: &CScript, pubkey: &mut valtype) -> bool
         return pubkey::ValidSize(pubkey);
     }
     return false;
+}
+
+fn MatchMultisig(script: &CScript, required_sigs: &mut i32, pubkeys: &Vec<valtype>) -> bool
+{
+    let opcode: opcodetype;
+    let data: valtype;
+
+    CScript::const_iterator it = script.begin();
+    if (script.size() < 1 || script.back() != OP_CHECKMULTISIG) return false;
+
+    if (!script.GetOp(it, opcode, data)) return false;
+    auto req_sigs = GetScriptNumber(opcode, data, 1, MAX_PUBKEYS_PER_MULTISIG);
+    if (!req_sigs) return false;
+    required_sigs = *req_sigs;
+    while (script.GetOp(it, opcode, data) && CPubKey::ValidSize(data)) {
+        pubkeys.emplace_back(std::move(data));
+    }
+    auto num_keys = GetScriptNumber(opcode, data, required_sigs, MAX_PUBKEYS_PER_MULTISIG);
+    if (!num_keys) return false;
+    if (pubkeys.size() != static_cast<unsigned long>(*num_keys)) return false;
+
+    return (it + 1 == script.end());
 }
 
 //TxoutType Solver(const CScript& scriptPubKey, std::vector<std::vector<unsigned char>>& vSolutionsRet)
