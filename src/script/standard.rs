@@ -3,7 +3,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-use crate::script::CScript;
+use crate::script::{CScript, CScriptNum, OP_FALSE};
 use crate::script::interpreter::*;
 use crate::script::opcodetype;
 use crate::pubkey;
@@ -25,8 +25,13 @@ pub enum TxoutType {
     WITNESS_UNKNOWN,
 }
 
+fn IsPushdataOp(opcode: opcodetype) -> bool
+{
+    opcode > OP_FALSE && opcode <= opcodetype::OP_PUSHDATA4
+}
+
 //typedef std::vector<unsigned char> valtype;
-type valtype = &[u8];
+type valtype = Vec<u8>;
 
 //static bool MatchPayToPubkey(const CScript& script, valtype& pubkey)
 fn MatchPayToPubkey(script: &CScript, pubkey: &mut valtype) -> bool
@@ -37,7 +42,7 @@ fn MatchPayToPubkey(script: &CScript, pubkey: &mut valtype) -> bool
         pubkey.copy_from_slice(&script.v[0..pubkey::SIZE + 1]);
         return pubkey::ValidSize(pubkey);
     }
-    if script.v.len() == pubkey::COMPRESSED_SIZE + 2 && script.v[0] == pubkey::COMPRESSED_SIZE as u8 && script.v.last().unwrap() == opcodetype::OP_CHECKSIG
+    if script.v.len() == pubkey::COMPRESSED_SIZE + 2 && script.v[0] == pubkey::COMPRESSED_SIZE as u8 && *script.v.last().unwrap() == opcodetype::OP_CHECKSIG as u8
     {
         //pubkey = valtype(script.begin() + 1, script.begin() + pubkey::COMPRESSED_SIZE + 1);
         pubkey.copy_from_slice(&script.v[1..pubkey::COMPRESSED_SIZE + 1]);
@@ -48,9 +53,9 @@ fn MatchPayToPubkey(script: &CScript, pubkey: &mut valtype) -> bool
 
 fn MatchPayToPubkeyHash(script: &CScript, pubkeyhash: &valtype) -> bool
 {
-    if script.len() == 25 && script.v[0] == opcodetype::OP_DUP && script.v[1] == opcodetype::OP_HASH160 &&
-        script.v[2] == 20 && script.v[23] == opcodetype::OP_EQUALVERIFY && script.v[24] == opcodetype::OP_CHECKSIG {
-        pubkeyhash = script.v[3..23];
+    if script.v.len() == 25 && script.v[0] == opcodetype::OP_DUP as u8 && script.v[1] == opcodetype::OP_HASH160 as u8 &&
+        script.v[2] == 20 && script.v[23] == opcodetype::OP_EQUALVERIFY as u8 && script.v[24] == opcodetype::OP_CHECKSIG as u8 {
+        pubkeyhash = &script.v[3..23].to_vec();
         return true;
     }
     return false;
@@ -71,51 +76,59 @@ fn GetScriptNumber(opcode: opcodetype, data: valtype, min: i32, max: i32) -> Opt
     if IsSmallInteger(opcode) {
         count = CScript::DecodeOP_N(opcode);
     } else if IsPushdataOp(opcode) {
-        if !CheckMinimalPush(data, opcode) { None }
-        count = CScriptNum:new(data, /* fRequireMinimal = */ true).getint()?;
+        if !super::CheckMinimalPush(&data[0..], opcode) {
+            return None;
+        }
+        let cnum = CScriptNum::new(&data, /* fRequireMinimal = */ true, None).unwrap();
+        count = cnum.getint();
 
     } else {
-        return {};
+        return None;
     }
-    if count < min || count > max { None };
+    if count < min || count > max { return None; };
 
-    Some(count);
+    return Some(count);
 }
 
 fn MatchMultisig(script: &CScript, required_sigs: &mut i32, pubkeys: &Vec<valtype>) -> bool
 {
-    let opcode: opcodetype;
-    let data: valtype;
-    let it = script.v.as_slice();
+    let mut opcode: opcodetype;
+    let mut data: valtype;
+    let mut it = script.v.as_slice();
 
     //CScript::const_iterator it = script.begin();
-    if script.v.len() < 1 || script.v.last() != opcodetype::OP_CHECKMULTISIG
+    if script.v.len() < 1
     {
         return false;
     }
 
-    if !script.GetOp(it, opcode, data) {
-        false
+    let last = script.v.last();
+    if last == None || *last.unwrap() != opcodetype::OP_CHECKMULTISIG as u8 {
+        return false;
     }
-    let req_sigs = GetScriptNumber(opcode, data, 1, MAX_PUBKEYS_PER_MULTISIG);
-    if (!req_sigs) {
-        false
+
+    if !script.GetOp(&mut it, &mut opcode, &mut data[0..]) {
+        return false;
     }
-    required_sigs = *req_sigs;
-    while script.GetOp(it, opcode, data) && CPubKey::ValidSize(data)
+    let req_sigs = GetScriptNumber(opcode, data, 1, super::MAX_PUBKEYS_PER_MULTISIG);
+    if req_sigs == None {
+        return false;
+    }
+    *required_sigs = req_sigs.unwrap();
+    while script.GetOp(&mut it, &mut opcode, &mut data) && pubkey::ValidSize(&data)
     {
         pubkeys.push(data);
     }
-    let num_keys = GetScriptNumber(opcode, data, required_sigs, MAX_PUBKEYS_PER_MULTISIG);
-    if !num_keys
+    let num_keys = GetScriptNumber(opcode, data, *required_sigs, super::MAX_PUBKEYS_PER_MULTISIG);
+    if num_keys == None
     {
-        false
+        return false;
     }
-    if pubkeys.len() != *num_keys as usize {
-        false
+    if pubkeys.len() != num_keys.unwrap() as usize {
+        return false;
     }
 
-    return (it + 1 == script.end());
+    return it.len() == 0;
 }
 
 //TxoutType Solver(const CScript& scriptPubKey, std::vector<std::vector<unsigned char>>& vSolutionsRet)

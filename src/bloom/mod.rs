@@ -131,11 +131,10 @@ impl CBloomFilter {
             {
                 let mut opcode: opcodetype;
 
-                //if !txout.scriptPubKey.GetOp(pc, opcode, data)
-                //{
-                //    break;
-                //}
-                (opcode, pc, data) = txout.scriptPubKey.GetOp(pc).unwrap();
+                if !txout.scriptPubKey.GetOp(&mut pc, &mut opcode, &mut data)
+                {
+                    break;
+                }
 
                 if data.len() != 0 && self.contains_slice(data)
                 {
@@ -173,12 +172,12 @@ impl CBloomFilter {
             }
 
             // Match if the filter contains any arbitrary script data element in any scriptSig in tx
-            let pc = txin.scriptSig.v.iter();
-            let mut data: Vec<u8>;
-            for pc in txin.scriptSig.v.iter()
+            let pc = &mut txin.scriptSig.v[0..];
+            let mut data: &mut [u8];
+            while pc.len() > 0
             {
                 let mut opcode: opcodetype;
-                if !txin.scriptSig.GetOp(pc, opcode, data)
+                if !txin.scriptSig.GetOp(pc, &mut opcode, &mut data)
                 {
                     break;
                 }

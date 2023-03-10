@@ -42,7 +42,8 @@ const VALIDATION_WEIGHT_PER_SIGOP_PASSED: i64 = 50;
 // How much weight budget is added to the witness size (Tapscript only, see BIP 342).
 const VALIDATION_WEIGHT_OFFSET: i64 = 50;
 
-/// Script opcodes
+// Script opcodes
+#[derive(PartialEq, PartialOrd)]
 pub enum opcodetype
 {
     // push value
@@ -183,8 +184,8 @@ pub enum opcodetype
     OP_INVALIDOPCODE = 0xff,
 }
 
-const OP_FALSE: opcodetype = opcodetype::OP_0;
-const OP_TRUE: opcodetype = opcodetype::OP_1;
+pub const OP_FALSE: opcodetype = opcodetype::OP_0;
+pub const OP_TRUE: opcodetype = opcodetype::OP_1;
 
 /**
  * Numeric opcodes (OP_1ADD, etc) are restricted to operating on 4-byte integers.
@@ -201,39 +202,70 @@ struct CScriptNum {
 impl CScriptNum {
     const nDefaultMaxNumSize: usize = 4;
 
-    pub fn from_vch(self, vch: &Vec<u8>, fRequireMinimal: bool, nSize: Option<usize>) -> Result<Self, String>
+    fn new(vch: &Vec<u8>, fRequireMinimal: bool, nSize: Option<usize>) -> Result<Self, String>
     {
-        let nMaxNumSize = nSize.unwrap_or(self.nDefaultMaxNumSize);
+        let nMaxNumSize = nSize.unwrap_or(CScriptNum::nDefaultMaxNumSize);
         if vch.len() > nMaxNumSize {
             Err("script number overflow")
         }
-        if (fRequireMinimal && vch.size() > 0) {
-        // Check that the number is encoded with the minimum possible
-        // number of bytes.
-        //
-        // If the most-significant-byte - excluding the sign bit - is zero
-        // then we're not minimal. Note how this test also rejects the
-        // negative-zero encoding, 0x80.
-        if ((vch.back() & 0x7f) == 0) {
-        // One exception: if there's more than one byte and the most
-        // significant bit of the second-most-significant-byte is set
-        // it would conflict with the sign bit. An example of this case
-        // is +-255, which encode to 0xff00 and 0xff80 respectively.
-        // (big-endian).
-        if vch.len() <= 1 || (vch[vch.len() - 2] & 0x80) == 0 {
-            Err("non-minimally encoded script number");
+        if fRequireMinimal && vch.len() > 0 {
+            // Check that the number is encoded with the minimum possible
+            // number of bytes.
+            //
+            // If the most-significant-byte - excluding the sign bit - is zero
+            // then we're not minimal. Note how this test also rejects the
+            // negative-zero encoding, 0x80.
+           if (vch.last().unwrap() & 0x7f) == 0 {
+                // One exception: if there's more than one byte and the most
+                // significant bit of the second-most-significant-byte is set
+                // it would conflict with the sign bit. An example of this case
+                // is +-255, which encode to 0xff00 and 0xff80 respectively.
+                // (big-endian).
+          //      if vch.len() <= 1 || (vch[vch.len() - 2] & 0x80) == 0 {
+                    Err("non-minimally encoded script number");
+         //       }
+            }
         }
-        }
-        }
-        self.m_value = self.set_vch(vch);
-        Ok(self)
+        let m = set_vch(vch);
+        Ok(Self {m})
     }
 
     pub fn GetInt64(self) -> i64 { return self.m_value; }
 
+    pub fn getint(self) -> i32
+    {
+        if self.m_value > i32::MAX as i64 {
+            return i32::MAX;
+        }
+        else if self.m_value < i32::MIN as i64 {
+            return i32::MIN;
+        }
+        return self.m_value as i32;
+    }
+
     pub fn getvch(self) -> Vec<u8>
     {
         return self.serialize(self.m_value);
+    }
+
+    //static int64_t set_vch(const std::vector<unsigned char>& vch)
+    fn set_vch(vch: &Vec<u8>) -> i64
+    {
+        if vch.len() == 0 {
+            return 0;
+        }
+
+        let mut result: i64 = 0;
+        //for (size_t i = 0; i != vch.size(); ++i)
+        for i in [0..vch.len()] {
+            result |= (vch[i] as i64) << 8 * i as i64;
+        }
+        // If the input vector's most significant byte is 0x80, remove it from
+        // the result's msb and return a negative.
+        if vch.last() & 0x80 != 0 {
+            return -(result & !((0x80 as u64) << (8 * (vch.len() - 1))));
+        }
+        return result;
     }
 
     //static std::vector<unsigned char> serialize(const int64_t& value)
@@ -287,7 +319,7 @@ impl CScriptNum {
 
 //bool GetScriptOp(CScriptBase::const_iterator& pc, CScriptBase::const_iterator end, opcodetype& opcodeRet, std::vector<unsigned char>* pvchRet)
 /// Return opcode, slice to start of next op, slice to push data
-fn GetScriptOp(pc: &mut [u8], opcodeRet: &mut opcodetype, pvchRet: &mut Vec<u8>) -> bool
+fn GetScriptOp(pc: &mut [u8], opcodeRet: &mut opcodetype, pvchRet: &mut [u8]) -> bool
 {
     let mut opcodeRet: opcodetype = OP_INVALIDOPCODE;
     let mut slice = pc;
@@ -304,7 +336,7 @@ fn GetScriptOp(pc: &mut [u8], opcodeRet: &mut opcodetype, pvchRet: &mut Vec<u8>)
     //    return false;
     //unsigned int opcode = *pc++;
     let opcode: opcodetype = pc[0];
-    slice = &pc[1..];
+    slice = &mut pc[1..];
 
     // Immediate operand
     if opcode <= OP_PUSHDATA4
@@ -358,7 +390,8 @@ fn GetScriptOp(pc: &mut [u8], opcodeRet: &mut opcodetype, pvchRet: &mut Vec<u8>)
     }
 
     //opcodeRet = static_cast<opcodetype>(opcode);
-    pvchRet.copy_from_slice(slice[0..nSize as usize]);
+    //pvchRet.copy_from_slice(slice[0..nSize as usize]);
+    pvchRet = &slice[0..nSize as usize];
     pc = slice[nSize as usize..];
     *opcodeRet = opcode
     //return true;
@@ -432,7 +465,7 @@ impl CScript
     {
         return GetScriptOp(pc, end(), opcodeRet, &vchRet);
     }*/
-    pub fn GetScriptOp(pc: &mut [u8], opcodeRet: &mut opcodetype, pvchRet: &mut Vec<u8>) -> bool
+    pub fn GetOp(self, pc: &mut [u8], opcodeRet: &mut opcodetype, pvchRet: &mut [u8]) -> bool
     {
         GetScriptOp(pc, opcodeRet, pvchRet)
     }
@@ -669,4 +702,31 @@ impl<T> Shl<T> for CScript {
         Self
     } 
 
+}
+
+// bool CheckMinimalPush(const std::vector<unsigned char>& data, opcodetype opcode) {
+pub fn CheckMinimalPush(data: &[u8], opcode: opcodetype) -> bool
+{
+    // Excludes OP_1NEGATE, OP_1-16 since they are by definition minimal
+    assert!(0 <= opcode as u8 && opcode <= OP_PUSHDATA4);
+    if data.len() == 0 {
+        // Should have used OP_0.
+        return opcode == OP_0;
+    } else if data.len() == 1 && data[0] >= 1 && data[0] <= 16 {
+        // Should have used OP_1 .. OP_16.
+        return false;
+    } else if data.len() == 1 && data[0] == 0x81 {
+        // Should have used OP_1NEGATE.
+        return false;
+    } else if data.len() <= 75 {
+        // Must have used a direct push (opcode indicating number of bytes pushed + those bytes).
+        return opcode as u8 == data.len();
+    } else if data.len() <= 255 {
+        // Must have used OP_PUSHDATA.
+        return opcode == OP_PUSHDATA1;
+    } else if data.len() <= 65535 {
+        // Must have used OP_PUSHDATA2.
+        return opcode == OP_PUSHDATA2;
+    }
+    return true;
 }
