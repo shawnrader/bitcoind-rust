@@ -43,6 +43,7 @@ const VALIDATION_WEIGHT_PER_SIGOP_PASSED: i64 = 50;
 const VALIDATION_WEIGHT_OFFSET: i64 = 50;
 
 // Script opcodes
+#[repr(u8)]
 #[derive(PartialEq, PartialOrd)]
 pub enum opcodetype
 {
@@ -206,7 +207,7 @@ impl CScriptNum {
     {
         let nMaxNumSize = nSize.unwrap_or(CScriptNum::nDefaultMaxNumSize);
         if vch.len() > nMaxNumSize {
-            Err("script number overflow")
+            return Err("script number overflow".to_string());
         }
         if fRequireMinimal && vch.len() > 0 {
             // Check that the number is encoded with the minimum possible
@@ -222,12 +223,12 @@ impl CScriptNum {
                 // is +-255, which encode to 0xff00 and 0xff80 respectively.
                 // (big-endian).
           //      if vch.len() <= 1 || (vch[vch.len() - 2] & 0x80) == 0 {
-                    Err("non-minimally encoded script number");
+                    return Err("non-minimally encoded script number".to_string());
          //       }
             }
         }
-        let m = set_vch(vch);
-        Ok(Self {m})
+        let m = Self::set_vch(vch);
+        Ok(Self {m_value: m})
     }
 
     pub fn GetInt64(self) -> i64 { return self.m_value; }
@@ -245,7 +246,7 @@ impl CScriptNum {
 
     pub fn getvch(self) -> Vec<u8>
     {
-        return self.serialize(self.m_value);
+        return CScriptNum::serialize(self.m_value);
     }
 
     //static int64_t set_vch(const std::vector<unsigned char>& vch)
@@ -257,25 +258,25 @@ impl CScriptNum {
 
         let mut result: i64 = 0;
         //for (size_t i = 0; i != vch.size(); ++i)
-        for i in [0..vch.len()] {
+        for i in 0..vch.len() {
             result |= (vch[i] as i64) << 8 * i as i64;
         }
         // If the input vector's most significant byte is 0x80, remove it from
         // the result's msb and return a negative.
-        if vch.last() & 0x80 != 0 {
-            return -(result & !((0x80 as u64) << (8 * (vch.len() - 1))));
+        if *vch.last().unwrap() & 0x80 != 0 {
+            return -(result & !((0x80 as i64) << (8 * (vch.len() - 1))));
         }
         return result;
     }
 
     //static std::vector<unsigned char> serialize(const int64_t& value)
-    pub fn serialize(self, value: i64) -> Vec<u8>
+    pub fn serialize(value: i64) -> Vec<u8>
     {
         let mut result: Vec<u8> = Vec::new();
 
         if value == 0
         {
-            result
+            return result;
         }
 
         let neg: bool = value < 0;
@@ -297,7 +298,7 @@ impl CScriptNum {
 //    0x80 to it, since it will be subtracted and interpreted as a negative when
 //    converting to an integral.
 
-        if result.last() & 0x80
+        if *result.last().unwrap() & 0x80 != 0
         {
             if neg {
                 result.push(0x80);
@@ -328,14 +329,14 @@ fn GetScriptOp(pc: &mut [u8], opcodeRet: &mut opcodetype, pvchRet: &mut [u8]) ->
     //if (pvchRet)
     //    pvchRet->clear();
     if pc.is_empty() {
-        false
+        return false;
     }
 
     // Read instruction
     //if (end - pc < 1)
     //    return false;
     //unsigned int opcode = *pc++;
-    let opcode: opcodetype = pc[0];
+    let opcode: opcodetype = unsafe { std::mem::transmute(pc[0])};
     slice = &mut pc[1..];
 
     // Immediate operand
@@ -343,45 +344,45 @@ fn GetScriptOp(pc: &mut [u8], opcodeRet: &mut opcodetype, pvchRet: &mut [u8]) ->
     {
         if opcode < OP_PUSHDATA1
         {
-            nSize = opcode;
+            nSize = opcode as u32;
         }
         else if opcode == OP_PUSHDATA1
         {
-            if slice.size() < 1
+            if slice.len() < 1
             {
-                false
+                return false;
             }
             //nSize = *pc++;
-            nSize = *slice;
-            slice = &slice[1..];
+            nSize = slice[0] as u32;
+            slice = &mut slice[1..];
         }
         else if opcode == OP_PUSHDATA2
         {
             if slice.len() < 2
             {
-                false
+                return false;
             }
             //nSize = ReadLE16(&pc[0]);
-            nSize = u32::from(u16::from_le_bytes(slice[0..2]));
+            nSize = u32::from(u16::from_le_bytes(slice[0..2].try_into().unwrap()));
             //pc += 2;
-            slice = &slice[2..];
+            slice = &mut slice[2..];
         }
         else if opcode == OP_PUSHDATA4
         {
             if slice.len() < 4
             {
-                false
+                return false;
             }
             //nSize = ReadLE32(&pc[0]);
-            nSize = u32::from_le_bytes(slice[0..2]);
+            nSize = u32::from_le_bytes(slice[0..2].try_into().unwrap());
             //pc += 4;
-            slice = &slice[2..];
+            slice = &mut slice[2..];
         }
         //if (end - pc < 0 || (unsigned int)(end - pc) < nSize)
         //    return false;
-        if slice.len() < nSize
+        if slice.len() < nSize as usize
         {
-            false
+            return false;
         }
         
         //if (pvchRet)
@@ -391,11 +392,11 @@ fn GetScriptOp(pc: &mut [u8], opcodeRet: &mut opcodetype, pvchRet: &mut [u8]) ->
 
     //opcodeRet = static_cast<opcodetype>(opcode);
     //pvchRet.copy_from_slice(slice[0..nSize as usize]);
-    pvchRet = &slice[0..nSize as usize];
-    pc = slice[nSize as usize..];
-    *opcodeRet = opcode
-    //return true;
-    //Ok((opcode, slice, &slice[nSize as usize..]))
+    pvchRet = &mut slice[0..nSize as usize];
+    pc = &mut slice[nSize as usize..];
+    opcodeRet = opcode;
+    return true;
+
 }
 
 /**
@@ -424,11 +425,11 @@ impl CScript
     {
         if n == -1 || (n >= 1 && n <= 16)
         {
-            self.v.push_back(n + (OP_1 - 1));
+            self.v.push(n as u8 + (OP_1 as u8 - 1));
         }
         else if n == 0
         {
-            self.v.push_back(OP_0);
+            self.v.push(OP_0 as u8);
         }
         else
         {
