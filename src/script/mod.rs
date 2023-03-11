@@ -319,7 +319,7 @@ impl CScriptNum {
 
 //bool GetScriptOp(CScriptBase::const_iterator& pc, CScriptBase::const_iterator end, opcodetype& opcodeRet, std::vector<unsigned char>* pvchRet)
 /// Return opcode, slice to start of next op, slice to push data
-fn GetScriptOp(pc: &mut [u8], opcodeRet: &mut opcodetype, pvchRet: &mut [u8]) -> bool
+fn GetScriptOp<'a>(pc: &'a mut [u8], opcodeRet: &mut opcodetype, pvchRet: &'a mut [u8]) -> bool
 {
     let mut opcodeRet: opcodetype = OP_INVALIDOPCODE;
     let mut slice = pc;
@@ -511,37 +511,30 @@ impl CScript
     {
         let mut n: i32 = 0;
         //const_iterator pc = begin();
-        let mut pc = &self.v[0..];
+        let mut pc = &mut self.v[0..];
         //opcodetype lastOpcode = OP_INVALIDOPCODE;
         let mut lastOpcode: opcodetype = OP_INVALIDOPCODE;
         while pc.len() > 0
         {
-            let r = self.GetOp(pc);
-            match r {
-                Ok((opcode, slice, size)) => {
-                    if opcode == OP_CHECKSIG || opcode == OP_CHECKSIGVERIFY
-                    {
-                        n += 1;
-                    }
-                    else if opcode == OP_CHECKMULTISIG || opcode == OP_CHECKMULTISIGVERIFY
-                    {
-                        if fAccurate && lastOpcode >= OP_1 && lastOpcode <= OP_16
-                        {
-                            n += self.DecodeOP_N(lastOpcode);
-                        }
-                        else
-                        {
-                            n += MAX_PUBKEYS_PER_MULTISIG;
-                        }
-                    }
-                    lastOpcode = opcode;
-        
+            let mut pvchRet: &mut [u8];
+            let mut opcode: opcodetype;
+            let r = self.GetOp(pc, &mut opcode, pvchRet);
+            if opcode == OP_CHECKSIG || opcode == OP_CHECKSIGVERIFY
+            {
+                n += 1;
+            }
+            else if opcode == OP_CHECKMULTISIG || opcode == OP_CHECKMULTISIGVERIFY
+            {
+                if fAccurate && lastOpcode >= OP_1 && lastOpcode <= OP_16
+                {
+                    n += CScript::DecodeOP_N(lastOpcode);
                 }
-                Err(b) => {
-                    break;
+                else
+                {
+                    n += MAX_PUBKEYS_PER_MULTISIG;
                 }
             }
-
+            lastOpcode = opcode;
         }
         return n;
     }
@@ -579,17 +572,17 @@ impl CScript
     {
         if self.v.len() < 4 || self.v.len() > 42
         {
-            false
+            return false;
         }
         if self.v[0] != opcodetype::OP_0 as u8 &&
            (self.v[0] < opcodetype::OP_1 as u8 ||
             self.v[0] > opcodetype::OP_16 as u8)
         {
-            false
+            return false;
         }
         if (self.v[1] as usize + 2) == self.v.len()
         {
-            version = self.DecodeOP_N(self.v[0].try_into());
+            version = CScript::DecodeOP_N(self.v[0].try_into());
             //program = std::vector<unsigned char>(this->begin() + 2, this->end());
             program.clone_from_slice(&self.v[2.. ]);
             true

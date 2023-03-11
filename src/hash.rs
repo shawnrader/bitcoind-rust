@@ -172,14 +172,15 @@ fn Hash160<T1>(in1: &T1) -> H160
 }
 
 struct HashWriter {
-    ctx: U256,
+    ctx: Sha256,
 }
 
 impl HashWriter {
     //void write(Span<const std::byte> src)
     pub fn write(self, src: Vec<u8>)
     {
-        self.ctx.Write(UCharCast(src.data()), src.size());
+        //self.ctx.Write(UCharCast(src.data()), src.size());
+        self.ctx.update(src)
     }
 
     /** Compute the double-SHA256 hash of all data written to this object.
@@ -187,11 +188,15 @@ impl HashWriter {
      * Invalidates this object.
      */
     //uint256 GetHash() {
-    pub fn get_hash(self) -> H256 {
-        let result: H256;
-        self.ctx.Finalize(result.begin());
-        self.ctx.Reset().Write(result.begin(), Sha256::output_size()).Finalize(result.begin());
-        return result;
+    pub fn GetHash(self) -> H256 {
+        let result = self.ctx.finalize_reset();
+        self.ctx.update(result);
+        let result = self.ctx.finalize();
+        return H256::from(result);
+
+        //self.ctx.Finalize(result.begin());
+        //self.ctx.Reset().Write(result.begin(), Sha256::output_size()).Finalize(result.begin());
+        //return result;
     }
 
     /** Compute the SHA256 hash of all data written to this object.
@@ -200,18 +205,17 @@ impl HashWriter {
      */
     //uint256 GetSHA256() {
     pub fn GetSHA256(self) -> H256 {
-        let result: H256;
-        self.ctx.Finalize(result.begin());
-        result
+        H256::from(self.ctx.finalize());
     }
 
     /**
      * Returns the first 64 bits from the resulting hash.
      */
     //inline uint64_t GetCheapHash() {
-    pub fn GetCheapHash() -> u64 {
-        let result = GetHash();
-        return ReadLE64(result.begin());
+    pub fn GetCheapHash(self) -> u64 {
+        let result = self.GetHash();
+        //return ReadLE64(result.begin());
+        result.to_low_u64_le();
     }
 
     // TODO: implement
