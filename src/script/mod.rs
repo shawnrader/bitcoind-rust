@@ -2,7 +2,6 @@ pub mod standard;
 pub mod interpreter;
 use std::ops::Shl;
 
-
 // Maximum number of bytes pushable to the stack
 const MAX_SCRIPT_ELEMENT_SIZE:i32 = 520;
 
@@ -433,7 +432,7 @@ impl CScript
         }
         else
         {
-            self.v << CScriptNum::serialize(n);
+            self << CScriptNum::serialize(n);
         }
     }
 
@@ -455,7 +454,7 @@ impl CScript
 
     pub fn new<T>(self, b: T)
     {
-        self.v << b
+        self << b;
     }
 
     /** Delete non-existent operator to defend against future introduction */
@@ -482,10 +481,10 @@ impl CScript
     {
         if opcode == OP_0
         {
-            0
+            return 0;
         }
         assert!(opcode >= OP_1 && opcode <= OP_16);
-        i32::from(opcode) - i32::from(OP_1 - 1)
+        opcode as i32 - (OP_1 as i32 - 1)
     }
 
     //static opcodetype EncodeOP_N(int n)
@@ -494,9 +493,10 @@ impl CScript
         assert!(n >= 0 && n <= 16);
         if n == 0
         {
-            OP_0
+            return OP_0;
         }
-        opcodetype::from(OP_1+n-1)
+
+        unsafe { std::mem::transmute(OP_1 as u8 + (n as u8 - 1))}
     }
 
     /**
@@ -514,7 +514,7 @@ impl CScript
         let mut pc = &self.v[0..];
         //opcodetype lastOpcode = OP_INVALIDOPCODE;
         let mut lastOpcode: opcodetype = OP_INVALIDOPCODE;
-        while pc.size() > 0
+        while pc.len() > 0
         {
             let r = self.GetOp(pc);
             match r {
