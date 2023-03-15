@@ -452,7 +452,7 @@ impl CScript
     // e.g. via prevector
     //explicit CScript(const std::vector<unsigned char>& b) = delete;
 
-    pub fn new<T>(self, b: T)
+    pub fn new(self, b: i64)
     {
         self << b;
     }
@@ -582,10 +582,11 @@ impl CScript
         }
         if (self.v[1] as usize + 2) == self.v.len()
         {
-            version = CScript::DecodeOP_N(self.v[0].try_into());
+            let opcode: opcodetype = unsafe { std::mem::transmute(self.v[0])};
+            version = CScript::DecodeOP_N(opcode);
             //program = std::vector<unsigned char>(this->begin() + 2, this->end());
             program.clone_from_slice(&self.v[2.. ]);
-            true
+            return true;
         }
         false
     }
@@ -593,26 +594,26 @@ impl CScript
     /** Called by IsStandardTx and P2SH/BIP62 VerifyScript (which makes it consensus-critical). */
     //bool IsPushOnly() const;
     //bool CScript::IsPushOnly(const_iterator pc) const
-    pub fn IsPushOnly(self, mut pc: &[u8]) -> bool
+    pub fn IsPushOnly(self, mut pc: &mut [u8]) -> bool
     {
         while pc.len() > 0
         {
             let mut opcode: opcodetype;
-            let r = self.GetOp(pc);
-            match r {
-                Ok((opcode, slice, size)) => {
-                    // Note that IsPushOnly() *does* consider OP_RESERVED to be a
-                    // push-type opcode, however execution of OP_RESERVED fails, so
-                    // it's not relevant to P2SH/BIP62 as the scriptSig would fail prior to
-                    // the P2SH special validation code being executed.
-                    if opcode > OP_16 as u8
-                    {
-                        return false;
-                    }
+            let mut pvchRet: &mut [u8];
+            if self.GetOp(pc, &mut opcode, pvchRet)
+            {
+                // Note that IsPushOnly() *does* consider OP_RESERVED to be a
+                // push-type opcode, however execution of OP_RESERVED fails, so
+                // it's not relevant to P2SH/BIP62 as the scriptSig would fail prior to
+                // the P2SH special validation code being executed.
+                if opcode > OP_16
+                {
+                    return false;
                 }
-                Err(b) => {
-                    false;
-                }
+            }
+            else
+            {
+                return false;
             }
         }
         return true;
@@ -629,7 +630,7 @@ impl CScript
     //bool IsUnspendable() const
     pub fn IsUnspendable(self) -> bool
     {
-        (self.v.size() > 0 && self.v[0] == OP_RETURN) || (self.v.size() > MAX_SCRIPT_SIZE)
+        (self.v.len() > 0 && self.v[0] == OP_RETURN as u8) || (self.v.len() > MAX_SCRIPT_SIZE as usize)
     }
 
     pub fn clear(self)
@@ -641,7 +642,16 @@ impl CScript
 
 
 
-   //CScript& operator<<(int64_t b) LIFETIMEBOUND { return push_int64(b); }
+//CScript& operator<<(int64_t b) LIFETIMEBOUND { return push_int64(b); }
+impl Shl<i64> for CScript {
+    type Output = Self;
+
+    fn shl(self, b: i64) -> Self {
+        self.push_int64(b);
+        self
+    }
+}
+
 /*
    CScript& operator<<(opcodetype opcode) LIFETIMEBOUND
    {
@@ -650,13 +660,38 @@ impl CScript
        insert(end(), (unsigned char)opcode);
        return *this;
    }
+*/
+impl Shl<opcodetype> for CScript {
+    type Output = Self;
 
+    fn shl(self, opcode: opcodetype) -> Self
+    {
+        assert!(((opcode as u8) < 0) || ((opcode as u8) > 0xff));
+        self.v.insert(0, opcode as u8);
+        self
+    }
+}
+
+
+/*
    CScript& operator<<(const CScriptNum& b) LIFETIMEBOUND
    {
        *this << b.getvch();
        return *this;
    }
+*/
 
+impl Shl<CScriptNum> for CScript {
+    type Output = Self;
+
+    fn shl(self, b: CScriptNum) -> Self
+    {
+        self << b.getvch();
+        self
+    }
+}
+
+/*
    CScript& operator<<(const std::vector<unsigned char>& b) LIFETIMEBOUND
    {
        if (b.size() < OP_PUSHDATA1)
@@ -686,17 +721,48 @@ impl CScript
        return *this;
    }
 */
-impl<T> Shl<T> for CScript {
+impl Shl<Vec<u8>> for CScript {
     type Output = Self;
 
-    fn shl(self, rhs:T) -> Self::Output
+    fn shl(self, b: Vec<u8>) -> Self
     {
-        // TODO: figure out what to do here
-        //Serialize(self.S, rhs);
-        Self
-    } 
+        if b.len() < OP_PUSHDATA1 as usize
+        {
+            //insert(end(), (unsigned char)b.size());
+            self.v.push(b.len() as u8)
 
+        }
+        else if b.len() <= 0xff as usize
+        {
+            //insert(end(), OP_PUSHDATA1);
+            //insert(end(), (unsigned char)b.size());
+            self.v.push(OP_PUSHDATA1 as u8);
+            self.v.push(b.len() as u8)
+        }
+        else if b.len() <= 0xffff as usize
+        {
+            //insert(end(), OP_PUSHDATA2);
+            self.v.push(OP_PUSHDATA2 as u8);
+            //uint8_t _data[2];
+            //WriteLE16(_data, b.size());
+            //insert(end(), _data, _data + sizeof(_data));
+            self.v.append(&mut b);
+        }
+        else
+        {
+            //insert(end(), OP_PUSHDATA4);
+            self.v.push(OP_PUSHDATA4 as u8);
+            //uint8_t _data[4];
+            //WriteLE32(_data, b.size());
+            //insert(end(), _data, _data + sizeof(_data));
+            self.v.append(&mut b);
+        }
+        //insert(end(), b.begin(), b.end());
+        //return *this;
+        self
+    }
 }
+
 
 // bool CheckMinimalPush(const std::vector<unsigned char>& data, opcodetype opcode) {
 pub fn CheckMinimalPush(data: &[u8], opcode: opcodetype) -> bool
@@ -714,7 +780,7 @@ pub fn CheckMinimalPush(data: &[u8], opcode: opcodetype) -> bool
         return false;
     } else if data.len() <= 75 {
         // Must have used a direct push (opcode indicating number of bytes pushed + those bytes).
-        return opcode as u8 == data.len();
+        return opcode as u8 == data.len() as u8;
     } else if data.len() <= 255 {
         // Must have used OP_PUSHDATA.
         return opcode == OP_PUSHDATA1;

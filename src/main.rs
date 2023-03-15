@@ -8,6 +8,7 @@ pub mod serialize;
 pub mod version;
 pub mod consensus;
 pub mod pubkey;
+pub mod crypto;
 
 fn main() {
     println!("Hello, world!");

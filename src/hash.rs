@@ -1,7 +1,8 @@
-use sha2::{Sha256, Digest};
 use primitive_types::{U256, H256, H160};
 use std::cmp::min;
 use std::ops::{Shl, Shr};
+use zerocopy::AsBytes;
+use crate::crypto::sha256::CSHA256;
 
 //inline uint32_t ROTL32(uint32_t x, int8_t r)
 fn ROTL32(x: u32, r: i8) -> u32
@@ -18,7 +19,7 @@ pub fn MurmurHash3(nHashSeed: u32, vDataToHash: Vec<u8>) -> u32
     let c1: u32 = 0xcc9e2d51;
     let c2: u32 = 0x1b873593;
 
-    let nblocks: usize = vDataToHash.size() / 4;
+    let nblocks: usize = vDataToHash.len() / 4;
 
     //----------
     // body
@@ -28,7 +29,8 @@ pub fn MurmurHash3(nHashSeed: u32, vDataToHash: Vec<u8>) -> u32
     
     for i in 0 .. nblocks {
         // uint32_t k1 = ReadLE32(blocks + i*4);
-        let k1: u32 =  vDataToHash[i*4 + 3] << 24 | vDataToHash[i*4 + 2] << 16 | vDataToHash[i*4 + 1] << 8 | vDataToHash[i*4];
+        let k1: u32 =  (vDataToHash[i*4 + 3] as u32) << 24 | (vDataToHash[i*4 + 2] as u32) << 16 |
+            (vDataToHash[i*4 + 1] as u32) << 8 | vDataToHash[i*4] as u32;
         
         k1 *= c1;
         k1 = ROTL32(k1, 15);
@@ -43,17 +45,17 @@ pub fn MurmurHash3(nHashSeed: u32, vDataToHash: Vec<u8>) -> u32
     // tail
 
     //const uint8_t* tail = vDataToHash.data() + nblocks * 4;
-    let tail = vDataToHash[nblocks * 4 ..];
+    let tail = &vDataToHash[nblocks * 4 ..];
     let k1: u32 = 0;
 
-    if (vDataToHash.size() & 3) == 3 {
-        k1 ^= tail[2] << 16;
+    if (vDataToHash.len() & 3) == 3 {
+        k1 ^= (tail[2] as u32) << 16;
     }
-    if (vDataToHash.size() & 3) == 2 {
-        k1 ^= tail[1] << 8;
+    if (vDataToHash.len() & 3) == 2 {
+        k1 ^= (tail[1] as u32 )<< 8;
     }
-    if (vDataToHash.size() & 3) == 1 {
-        k1 ^= tail[0];
+    if (vDataToHash.len() & 3) == 1 {
+        k1 ^= tail[0] as u32;
         k1 *= c1;
         k1 = ROTL32(k1, 15);
         k1 *= c2;
@@ -62,7 +64,7 @@ pub fn MurmurHash3(nHashSeed: u32, vDataToHash: Vec<u8>) -> u32
 
     //----------
     // finalization
-    h1 ^= vDataToHash.size();
+    h1 ^= vDataToHash.len() as u32;
     h1 ^= h1 >> 16;
     h1 *= 0x85ebca6b;
     h1 ^= h1 >> 13;
@@ -73,106 +75,108 @@ pub fn MurmurHash3(nHashSeed: u32, vDataToHash: Vec<u8>) -> u32
 }
 
 
-struct Hash256 {
-    sha: Sha256,
+struct CHash256 {
+    sha: CSHA256,
 }
 
-impl Hash256 {
-    const OUTPUT_SIZE:usize = Sha256::output_size();
+impl CHash256 {
+    const OUTPUT_SIZE:usize = CSHA256::OUTPUT_SIZE;
 
-    pub fn Hash256(self) {
-        self.sha = Sha256::new();
+    pub fn new() -> Self {
+        Self { sha: CSHA256::new() }
     }
 
     // void Finalize(Span<unsigned char> output) {
-    pub fn finalize(self, output: Vec<u8>) {
-        assert!(output.size() == self.sha.output_size());
-        //unsigned char buf[CSHA256::OUTPUT_SIZE];
-        let mut buf: [u8; Sha256::output_size()] = [0; Sha256::output_size()];
-        self.sha.finalize_into_reset(output);
+    pub fn finalize(self, output: &mut [u8]) {
+        assert!(output.len() == CHash256::OUTPUT_SIZE);
+        let mut buf: [u8; CSHA256::OUTPUT_SIZE];
+        self.sha.Finalize(&mut buf);
+        self.sha.Reset().Write(&buf, CSHA256::OUTPUT_SIZE).Finalize(&mut buf);
+
     }
 
     //CHash256& Write(Span<const unsigned char> input) {
-    pub fn write<'a>(self, input: Vec<u8>) -> &'a Hash256 {
+    pub fn write(self, input: &[u8]) -> Self {
         //self.sha.Write(input.data(), input.size());
-        self.sha.update(input);
-        &self
+        self.sha.Write(input, input.len());
+        self
     }
 
     // CHash256& Reset() {
-    pub fn reset<'a>(self) -> Self {
-        self.sha.reset();
-        &self
+    pub fn reset(self) -> Self {
+        self.sha.Reset();
+        self
     }        
 }
 
 /** A hasher class for Bitcoin's 160-bit hash (SHA-256 + RIPEMD-160). */
-struct Hash160 {
-    sha: Sha256,
+struct CHash160 {
+    sha: CSHA256,
 }
 
-impl Hash160 {
+impl CHash160 {
     const OUTPUT_SIZE:usize = 20;
     //void Finalize(Span<unsigned char> output) {
-    pub fn finalize(self, output: Vec<u8>) {
-        assert!(output.size() == self.OUTPUT_SIZE);
-        let empty_array: [u32; 0] = [];
+    pub fn finalize(self, output: &mut [u8]) {
+        assert!(output.len() == CHash256::OUTPUT_SIZE);
         // unsigned char buf[CSHA256::OUTPUT_SIZE];
-        let mut buf: [u8; Sha256::output_size()] = [0; Sha256::output_size()];
-        self.sha.finalize_into_reset(buf);
+        let mut buf: [u8; CSHA256::OUTPUT_SIZE];
+        self.sha.Finalize(&mut buf);
+        todo!();
+        //CRIPEMD160::Write(buf, CSHA256::OUTPUT_SIZE).Finalize(output.data());
     }
 
     //CHash160& Write(Span<const unsigned char> input) {
-    pub fn write<'a>(self, input: Vec<u8>) -> &'a Hash160 {
-        self.sha.Write(input.data(), input.size());
-        return &self
+    pub fn write(self, input: &[u8]) -> Self {
+        self.sha.Write(input, input.len());
+        self
     }
 
     //CHash160& Reset() {
-    pub fn reset<'a>(self) -> &'a Hash160 {
+    pub fn reset(self) -> Self {
         self.sha.Reset();
-        return &self;
+        self
     } 
 }
 
 /** Compute the 256-bit hash of an object. */
 //template<typename T>
 //inline uint256 Hash(const T& in1)
-fn Hash<T>(in1:&T) -> U256
+fn Hash<T: AsBytes>(in1:&T) -> U256
 {
-    let result: U256;
-    let h256 = Hash256::new();
-    h256.write(&in1.try_into()).finalize(result);
-    return result;
+    let h256 = CHash256::new();
+    let mut result: [u8; 64] = [0; 64];
+    h256.write(&in1.as_bytes()).finalize(&mut result);
+    U256::from_little_endian(&result)
 }
 
 /** Compute the 256-bit hash of the concatenation of two objects. */
 //template<typename T1, typename T2>
 //inline uint256 Hash(const T1& in1, const T2& in2) {
-fn HashCat<T1,T2>(in1: &T1, in2: &T2) -> U256 {
-    let result: U256;
-    let h256 = Hash256::new();
+fn HashCat<T1: AsBytes,T2: AsBytes>(in1: &T1, in2: &T2) -> U256 {
+    let mut result: [u8; 64] = [0; 64];
+    let h256 = CHash256::new();
     // Hash256().Write(MakeUCharSpan(in1)).Write(MakeUCharSpan(in2)).Finalize(result);
-    h256.write(&in1.try_into());
-    h256.write(&in2.try_into());
-    h256.finalize(result);
-    return result;
+    h256.write(&in1.as_bytes());
+    h256.write(&in2.as_bytes());
+    h256.finalize(&mut result);
+    U256::from_little_endian(&result)
 }
 
 /** Compute the 160-bit hash an object. */
 //template<typename T1>
 //inline uint160 Hash160(const T1& in1)
-fn Hash160<T1>(in1: &T1) -> H160
+fn Hash160<T1: AsBytes>(in1: &T1) -> H160
 {
-    let result: H160;
+    let mut result: [u8; 64] = [0; 64];
     //Hash160().Write(MakeUCharSpan(in1)).Finalize(result);
-    let h160 = Hash160::new();
-    h160.write(&in1.try_into()).finalize(result);
-    return result;
+    let h160 :CHash160;
+    h160.write(&in1.as_bytes()).finalize(&mut result);
+    H160::from_slice(&result)
 }
 
 struct HashWriter {
-    ctx: Sha256,
+    ctx: CSHA256,
 }
 
 impl HashWriter {

@@ -176,7 +176,7 @@ pub fn Solver(scriptPubKey: &CScript, vSolutionsRet: &mut Vec<Vec<u8>>) -> Txout
     // So long as script passes the IsUnspendable() test and all but the first
     // byte passes the IsPushOnly() test we don't care what exactly is in the
     // script.
-    if scriptPubKey.v.len() >= 1 && scriptPubKey.v[0] == opcodetype::OP_RETURN as u8 && scriptPubKey.IsPushOnly(&scriptPubKey.v[0..1])
+    if scriptPubKey.v.len() >= 1 && scriptPubKey.v[0] == opcodetype::OP_RETURN as u8 && scriptPubKey.IsPushOnly(&mut scriptPubKey.v[0..1])
     {
         return TxoutType::NULL_DATA;
     }
