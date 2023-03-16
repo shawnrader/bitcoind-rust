@@ -34,14 +34,14 @@ impl CBloomFilter {
     //SERIALIZE_METHODS(CBloomFilter, obj) { READWRITE(obj.vData, obj.nHashFuncs, obj.nTweak, obj.nFlags); }
 
     // inline unsigned int CBloomFilter::Hash(unsigned int nHashNum, Span<const unsigned char> vDataToHash) const
-    fn Hash(self, nHashNum:u32, vDataToHash: Vec<u8>) -> u32
+    fn Hash(&self, nHashNum:u32, vDataToHash: &[u8]) -> u32
     {
         // 0xFBA4C795 chosen as it guarantees a reasonable bit difference between nHashNum values.
         return MurmurHash3(nHashNum * 0xFBA4C795 + self.nTweak, vDataToHash) % (self.vData.len() as u32 * 8);
     }
 
     //void insert(Span<const unsigned char> vKey);
-    pub fn insert_span(self, vKey: Vec<u8>) {
+    pub fn insert_span(mut self, vKey: &[u8]) {
         // Avoid divide-by-zero (CVE-2013-5700)
         if self.vData.len() == 0
         {
@@ -102,7 +102,7 @@ impl CBloomFilter {
 
     /// Also adds any outputs which match the filter to the filter (to match their spending txes)
     //bool IsRelevantAndUpdate(const CTransaction& tx);
-    pub fn IsRelevantAndUpdate(self, tx: &CTransaction) -> bool
+    pub fn IsRelevantAndUpdate(self, tx: &mut CTransaction) -> bool
     {
         let mut fFound:bool = false;
         // Match if the filter contains the hash of tx
@@ -118,12 +118,12 @@ impl CBloomFilter {
 
         for i in 0..tx.vout.len()
         {
-            let txout: &CTxOut = &tx.vout[i];
+            let mut txout = &mut tx.vout[i];
             // Match if the filter contains any arbitrary script data element in any scriptPubKey in tx
             // If this matches, also add the specific output that was matched.
             // This means clients don't have to update the filter themselves when a new relevant tx
             // is discovered in order to find spending transactions, which avoids round-tripping and race conditions.
-            let mut pc = &txout.scriptPubKey.v[0..];
+            let mut pc = &mut txout.scriptPubKey.v[0..];
             //std::vector<unsigned char> data;
             let mut data:&[u8];
             //while (pc < txout.scriptPubKey.end())

@@ -465,7 +465,7 @@ impl CScript
     {
         return GetScriptOp(pc, end(), opcodeRet, &vchRet);
     }*/
-    pub fn GetOp(self, pc: &mut [u8], opcodeRet: &mut opcodetype, pvchRet: &mut [u8]) -> bool
+    pub fn GetOp(&self, pc: &mut [u8], opcodeRet: &mut opcodetype, pvchRet: &mut [u8]) -> bool
     {
         GetScriptOp(pc, opcodeRet, pvchRet)
     }

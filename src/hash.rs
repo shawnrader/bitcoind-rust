@@ -13,10 +13,10 @@ fn ROTL32(x: u32, r: i8) -> u32
 
 //TODO check replacing with rust Murmur3Hasher_x86_32
 //unsigned int MurmurHash3(unsigned int nHashSeed, Span<const unsigned char> vDataToHash)
-pub fn MurmurHash3(nHashSeed: u32, vDataToHash: Vec<u8>) -> u32
+pub fn MurmurHash3(nHashSeed: u32, vDataToHash: &[u8]) -> u32
 {
     // The following is MurmurHash3 (x86_32), see https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp
-    let h1: u32 = nHashSeed;
+    let mut h1: u32 = nHashSeed;
     let c1: u32 = 0xcc9e2d51;
     let c2: u32 = 0x1b873593;
 
@@ -30,7 +30,7 @@ pub fn MurmurHash3(nHashSeed: u32, vDataToHash: Vec<u8>) -> u32
     
     for i in 0 .. nblocks {
         // uint32_t k1 = ReadLE32(blocks + i*4);
-        let k1: u32 =  (vDataToHash[i*4 + 3] as u32) << 24 | (vDataToHash[i*4 + 2] as u32) << 16 |
+        let mut k1: u32 =  (vDataToHash[i*4 + 3] as u32) << 24 | (vDataToHash[i*4 + 2] as u32) << 16 |
             (vDataToHash[i*4 + 1] as u32) << 8 | vDataToHash[i*4] as u32;
         
         k1 *= c1;
@@ -47,7 +47,7 @@ pub fn MurmurHash3(nHashSeed: u32, vDataToHash: Vec<u8>) -> u32
 
     //const uint8_t* tail = vDataToHash.data() + nblocks * 4;
     let tail = &vDataToHash[nblocks * 4 ..];
-    let k1: u32 = 0;
+    let mut k1: u32 = 0;
 
     if (vDataToHash.len() & 3) == 3 {
         k1 ^= (tail[2] as u32) << 16;
