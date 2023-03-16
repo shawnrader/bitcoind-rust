@@ -1,4 +1,3 @@
-use std::io::Cursor;
 use byteorder::{ByteOrder, BigEndian, LittleEndian, WriteBytesExt};
 
 //uint16_t static inline ReadLE16(const unsigned char* ptr)
@@ -8,10 +7,11 @@ use byteorder::{ByteOrder, BigEndian, LittleEndian, WriteBytesExt};
     return le16toh(x);
 } */
 
-fn ReadLE16(ptr: &u8) -> u16
+fn ReadLE16(ptr: &[u8]) -> u16
 {
-    let mut rdr = Cursor::new(ptr);
-    rdr.read_u16::<LittleEndian>().unwrap()
+    //let mut rdr = Cursor::new(ptr);
+    //rdr::read_u16::<LittleEndian>().unwrap()
+    LittleEndian::read_u16(ptr)
 }
 
 /*
@@ -57,14 +57,21 @@ uint16_t static inline ReadBE16(const unsigned char* ptr)
     memcpy((char*)&x, ptr, 2);
     return be16toh(x);
 }
-
+*/
+/*
 uint32_t static inline ReadBE32(const unsigned char* ptr)
 {
     uint32_t x;
     memcpy((char*)&x, ptr, 4);
     return be32toh(x);
 }
+*/
+pub fn ReadBE32(ptr: &[u8]) -> u32
+{
+    BigEndian::read_u32(ptr)
+}
 
+/*
 uint64_t static inline ReadBE64(const unsigned char* ptr)
 {
     uint64_t x;
@@ -80,7 +87,6 @@ uint64_t static inline ReadBE64(const unsigned char* ptr)
 } */
 pub fn WriteBE32(ptr: &mut [u8], x: u32)
 {
-    //let v = x.to_be();
     BigEndian::write_u32(ptr, x);
 }
 
@@ -91,7 +97,5 @@ pub fn WriteBE32(ptr: &mut [u8], x: u32)
 } */
 pub fn WriteBE64(ptr: &mut [u8], x: u64)
 {
-    let v = x.to_be();
-    let mut cursor = std::io::Cursor::new(ptr);
-    cursor.write_u64::<BigEndian>(v).unwrap();
+    BigEndian::write_u64(ptr, x);
 }

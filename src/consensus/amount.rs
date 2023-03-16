@@ -21,7 +21,7 @@ pub const COIN: CAmount = 100000000;
  * */
 pub const MAX_MONEY: CAmount = 21000000 * COIN;
 
-fn MoneyRange(nValue: &CAmount) -> bool
+fn MoneyRange(nValue: CAmount) -> bool
 {
     nValue >= 0 && nValue <= MAX_MONEY
 }

@@ -20,7 +20,7 @@ impl<T> Shl<T> for CDataStream {
     {
         // TODO: figure out what to do here
         //Serialize(self.S, rhs);
-        Self
+        self
     } 
 
 }

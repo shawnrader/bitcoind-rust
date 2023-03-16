@@ -35,11 +35,11 @@ pub fn GetLen(chHeader: u8) -> usize
 {
     if chHeader == 2 || chHeader == 3
     {
-        COMPRESSED_SIZE
+        return COMPRESSED_SIZE;
     }
     if chHeader == 4 || chHeader == 6 || chHeader == 7
     {
-        SIZE
+        return SIZE;
     }
     0
 }

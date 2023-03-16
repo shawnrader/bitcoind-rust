@@ -1,5 +1,6 @@
 use primitive_types::{U256, H256, H160};
 use std::cmp::min;
+use std::io::Read;
 use std::ops::{Shl, Shr};
 use zerocopy::AsBytes;
 use crate::crypto::sha256::CSHA256;
@@ -181,10 +182,10 @@ struct HashWriter {
 
 impl HashWriter {
     //void write(Span<const std::byte> src)
-    pub fn write(self, src: Vec<u8>)
+    pub fn write(self, src: &[u8])
     {
         //self.ctx.Write(UCharCast(src.data()), src.size());
-        self.ctx.update(src)
+        self.ctx.Write(src, src.len());
     }
 
     /** Compute the double-SHA256 hash of all data written to this object.
@@ -193,14 +194,10 @@ impl HashWriter {
      */
     //uint256 GetHash() {
     pub fn GetHash(self) -> H256 {
-        let result = self.ctx.finalize_reset();
-        self.ctx.update(result);
-        let result = self.ctx.finalize();
+        let result: [u8; CSHA256::OUTPUT_SIZE] = [0; CSHA256::OUTPUT_SIZE as usize];
+        self.ctx.Finalize(&mut result);
+        self.ctx.Reset().Write(&mut result, CSHA256::OUTPUT_SIZE).Finalize(&mut result);
         return H256::from(result);
-
-        //self.ctx.Finalize(result.begin());
-        //self.ctx.Reset().Write(result.begin(), Sha256::output_size()).Finalize(result.begin());
-        //return result;
     }
 
     /** Compute the SHA256 hash of all data written to this object.
@@ -209,7 +206,9 @@ impl HashWriter {
      */
     //uint256 GetSHA256() {
     pub fn GetSHA256(self) -> H256 {
-        H256::from(self.ctx.finalize());
+        let result: [u8; CSHA256::OUTPUT_SIZE] = [0; CSHA256::OUTPUT_SIZE as usize];
+        self.ctx.Finalize(&mut result);
+        return H256::from(result);
     }
 
     /**
@@ -219,7 +218,7 @@ impl HashWriter {
     pub fn GetCheapHash(self) -> u64 {
         let result = self.GetHash();
         //return ReadLE64(result.begin());
-        result.to_low_u64_le();
+        result.to_low_u64_le()
     }
 
     // TODO: implement
@@ -239,15 +238,15 @@ impl<T> Shl<T> for HashWriter {
     {
         // TODO: figure out what to do here
         //Serialize(self.S, rhs);
-        Self
+        self
     } 
 
 }
 
 struct CHashWriter {
     hash_writer: HashWriter,
-    n_type: i32,
-    n_version: i32,
+    nType: i32,
+    nVersion: i32,
     //source: S,
 }
 
@@ -277,21 +276,22 @@ impl<T> Shl<T> for CHashWriter {
     {
         // TODO: figure out what to do here
         //Serialize(self.S, rhs);
-        Self
+        self
     } 
 
 }
 
 struct CHashVerifier<'a, T> {
     source:&'a T,
+    hashWriter: HashWriter,
 }
 
-impl <'a, T>CHashVerifier<'a, T>  {
+impl <'a, T: Read>CHashVerifier<'a, T>  {
     //void read(Span<std::byte> dst)
-    pub fn read(self, dst: Vec<u8>)
+    pub fn read(self, dst: &mut [u8])
     {
         self.source.read(dst);
-        self.write(dst);
+        self.hashWriter.write(dst);
     }
 
     //void ignore(size_t nSize)
@@ -301,7 +301,7 @@ impl <'a, T>CHashVerifier<'a, T>  {
         let mut data: [u8; 1024] = [0; 1024];
         while nSize > 0 {
             let now:usize = min(nSize, 1024);
-            self.read(data, now);
+            self.read(&mut data[0..now]);
             nSize -= now;
         }
     }
@@ -324,7 +324,7 @@ impl<T> Shr<T> for CHashVerifier<'_, T> {
     {
         // TODO: figure out what to do here
         //Unserialize(self.S, rhs);
-        Self
+        self
     } 
 
 }

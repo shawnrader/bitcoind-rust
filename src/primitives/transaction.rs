@@ -17,7 +17,7 @@ impl COutPoint
     // COutPoint(const uint256& hashIn, uint32_t nIn): hash(hashIn), n(nIn) { }
     pub fn new(self, hashIn: &H256, nIn: u32)
     {
-        self.hash = hashIn;
+        self.hash = *hashIn;
         self.n = nIn;
     }
 
@@ -26,14 +26,14 @@ impl COutPoint
     // void SetNull() { hash.SetNull(); n = NULL_INDEX; }
     pub fn SetNull(self)
     {
-        self.hash = H256.zero();
-        self.n = self.NULL_INDEX;
+        self.hash = H256::zero();
+        self.n = COutPoint::NULL_INDEX;
         
     }
 
     // bool IsNull() const { return (hash.IsNull() && n == NULL_INDEX); }
     pub fn IsNull(self) -> bool {
-        self.hash.is_zero() && self.n == self.NULL_INDEX
+        self.hash.is_zero() && self.n == COutPoint::NULL_INDEX
     }
 }
 
