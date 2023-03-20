@@ -43,7 +43,7 @@ const VALIDATION_WEIGHT_OFFSET: i64 = 50;
 
 // Script opcodes
 #[repr(u8)]
-#[derive(PartialEq, PartialOrd)]
+#[derive(Clone, PartialEq, PartialOrd)]
 pub enum opcodetype
 {
     // push value

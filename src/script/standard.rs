@@ -73,10 +73,10 @@ fn IsSmallInteger(opcode: opcodetype) -> bool
 fn GetScriptNumber(opcode: opcodetype, data: valtype, min: i32, max: i32) -> Option<i32>
 {
     let count: i32;
-    if IsSmallInteger(opcode) {
-        count = CScript::DecodeOP_N(opcode);
-    } else if IsPushdataOp(opcode) {
-        if !super::CheckMinimalPush(&data[0..], opcode) {
+    if IsSmallInteger(opcode.clone()) {
+        count = CScript::DecodeOP_N(opcode.clone());
+    } else if IsPushdataOp(opcode.clone()) {
+        if !super::CheckMinimalPush(&data[0..], opcode.clone()) {
             return None;
         }
         let cnum = CScriptNum::new(&data, /* fRequireMinimal = */ true, None).unwrap();
@@ -90,11 +90,11 @@ fn GetScriptNumber(opcode: opcodetype, data: valtype, min: i32, max: i32) -> Opt
     return Some(count);
 }
 
-fn MatchMultisig(script: &CScript, required_sigs: &mut i32, pubkeys: &Vec<valtype>) -> bool
+fn MatchMultisig(script: &mut CScript, required_sigs: &mut i32, pubkeys: &Vec<valtype>) -> bool
 {
     let mut opcode: opcodetype;
     let mut data: valtype;
-    let mut it = script.v.as_slice();
+    let mut it = script.v.as_mut_slice();
 
     //CScript::const_iterator it = script.begin();
     if script.v.len() < 1
@@ -132,7 +132,7 @@ fn MatchMultisig(script: &CScript, required_sigs: &mut i32, pubkeys: &Vec<valtyp
 }
 
 //TxoutType Solver(const CScript& scriptPubKey, std::vector<std::vector<unsigned char>>& vSolutionsRet)
-pub fn Solver(scriptPubKey: &CScript, vSolutionsRet: &mut Vec<Vec<u8>>) -> TxoutType
+pub fn Solver(scriptPubKey: &mut CScript, vSolutionsRet: &mut Vec<Vec<u8>>) -> TxoutType
 {
     vSolutionsRet.clear();
  
