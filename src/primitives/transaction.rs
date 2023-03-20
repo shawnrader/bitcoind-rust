@@ -95,7 +95,7 @@ impl CTxIn {
 
 }
 
-
+#[derive(Clone)]
 pub struct CTxOut {
     nValue: CAmount,
     pub scriptPubKey: CScript,
@@ -120,7 +120,7 @@ pub struct CTransaction {
 impl CTransaction {
     const CURRENT_VERSION: i32 = 2;
 
-    pub fn GetHash(self) -> H256
+    pub fn GetHash(&self) -> H256
     {
         self.hash.clone()
     }

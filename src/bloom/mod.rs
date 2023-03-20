@@ -6,6 +6,7 @@ use super::streams::CDataStream;
 use super::serialize::SER;
 use super::version::PROTOCOL_VERSION;
 use primitive_types::H256;
+use std::cell::RefCell;
 
 /// 20,000 items with fp rate < 0.1% or 10,000 items and <0.0001%
 const MAX_BLOOM_FILTER_SIZE: u32 = 36000; // bytes
@@ -57,7 +58,7 @@ impl CBloomFilter {
     }
 
     //void insert(const COutPoint& outpoint);
-    pub fn insert(self, outpoint: &COutPoint)
+    pub fn insert(&self, outpoint: &COutPoint)
     {
         let stream = CDataStream::new(SER::NETWORK, PROTOCOL_VERSION);
         stream << outpoint;
@@ -65,7 +66,7 @@ impl CBloomFilter {
     }
 
     //bool contains(Span<const unsigned char> vKey) const;
-    pub fn contains_slice(self, vKey: &[u8]) -> bool {
+    pub fn contains_slice(&self, vKey: &[u8]) -> bool {
         // Avoid divide-by-zero (CVE-2013-5700)
         if self.vData.len() == 0
         {
@@ -86,7 +87,7 @@ impl CBloomFilter {
     }
 
     //bool contains(const COutPoint& outpoint) const;
-    pub fn contains(self, outpoint: &COutPoint) -> bool {
+    pub fn contains(&self, outpoint: &COutPoint) -> bool {
         let stream = CDataStream::new(SER::NETWORK, PROTOCOL_VERSION);
         stream << outpoint;
         //return self.contains_slice(MakeUCharSpan(stream));
@@ -96,13 +97,13 @@ impl CBloomFilter {
     /// True if the size is <= MAX_BLOOM_FILTER_SIZE and the number of hash functions is <= MAX_HASH_FUNCS
     /// (catch a filter which was just deserialized which was too big)
     //bool IsWithinSizeConstraints() const;
-    pub fn IsWithinSizeConstraints(self) -> bool {
+    pub fn IsWithinSizeConstraints(&self) -> bool {
         return self.vData.len() <= MAX_BLOOM_FILTER_SIZE as usize && self.nHashFuncs <= MAX_HASH_FUNCS;
     }
 
     /// Also adds any outputs which match the filter to the filter (to match their spending txes)
     //bool IsRelevantAndUpdate(const CTransaction& tx);
-    pub fn IsRelevantAndUpdate(self, tx: &mut CTransaction) -> bool
+    pub fn IsRelevantAndUpdate(&self, tx: &mut CTransaction) -> bool
     {
         let mut fFound:bool = false;
         // Match if the filter contains the hash of tx
@@ -118,18 +119,20 @@ impl CBloomFilter {
 
         for i in 0..tx.vout.len()
         {
-            let txout = &mut tx.vout[i];
+            let vout = RefCell::new(tx.vout[i].clone());
+            let txout = vout.borrow_mut();
             // Match if the filter contains any arbitrary script data element in any scriptPubKey in tx
             // If this matches, also add the specific output that was matched.
             // This means clients don't have to update the filter themselves when a new relevant tx
             // is discovered in order to find spending transactions, which avoids round-tripping and race conditions.
-            let mut pc = &mut txout.scriptPubKey.v[0..];
+            //let mut pc = &mut tx.vout[i].scriptPubKey.v[0..];
+            let mut pc = &mut vout.borrow_mut().scriptPubKey.v[0..];
             //std::vector<unsigned char> data;
-            let mut data:&[u8];
+            let mut data:&mut [u8] = &mut [];
             //while (pc < txout.scriptPubKey.end())
             while pc.len() > 0
             {
-                let mut opcode: opcodetype;
+                let mut opcode: opcodetype = opcodetype::OP_INVALIDOPCODE;
 
                 if !txout.scriptPubKey.GetOp(&mut pc, &mut opcode, &mut data)
                 {
@@ -141,16 +144,16 @@ impl CBloomFilter {
                     fFound = true;
                     if (self.nFlags & bloomflags::BLOOM_UPDATE_MASK as u8) == bloomflags::BLOOM_UPDATE_ALL as u8
                     {
-                        let cout = COutPoint{hash: *hash, n: i as u32};
+                        let cout = COutPoint{hash, n: i as u32};
                         self.insert(&cout);
                     }
                     else if (self.nFlags & bloomflags::BLOOM_UPDATE_MASK as u8) == bloomflags::BLOOM_UPDATE_P2PUBKEY_ONLY as u8
                     {
-                        let mut vSolutions: Vec<Vec<u8>>;
+                        let mut vSolutions: Vec<Vec<u8>> = vec![];
                         let txout_type: TxoutType = Solver(&txout.scriptPubKey, &mut vSolutions);
                         if txout_type == TxoutType::PUBKEY || txout_type == TxoutType::MULTISIG
                         {
-                            self.insert(&COutPoint { hash: *hash, n:i as u32 } );
+                            self.insert(&COutPoint { hash, n:i as u32 } );
                         }
                     }
                     break;
@@ -163,7 +166,8 @@ impl CBloomFilter {
             return true;
         }
     
-        for txin in tx.vin.iter()
+        // TODO: look at changing this to a map
+        for txin in tx.vin.iter_mut()
         {
             // Match if the filter contains an outpoint tx spends
             if self.contains(&txin.prevout)
@@ -171,13 +175,14 @@ impl CBloomFilter {
                 return true;
             }
 
+            let scriptSig = RefCell::new(txin.scriptSig.clone());
             // Match if the filter contains any arbitrary script data element in any scriptSig in tx
-            let pc = &mut txin.scriptSig.v[0..];
-            let mut data: &mut [u8];
+            let pc = &mut scriptSig.borrow_mut().v[0..];
+            let mut data: &mut [u8] = &mut [];
             while pc.len() > 0
             {
-                let mut opcode: opcodetype;
-                if !txin.scriptSig.GetOp(pc, &mut opcode, &mut data)
+                let mut opcode: opcodetype = opcodetype::OP_INVALIDOPCODE;
+                if !scriptSig.borrow_mut().GetOp(pc, &mut opcode, &mut data)
                 {
                     break;
                 }

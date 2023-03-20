@@ -408,6 +408,7 @@ fn GetScriptOp<'a>(pc: &'a mut [u8], opcodeRet: &mut opcodetype, _pvchRet: &'a m
 
 /// Serialized script, used inside transaction inputs and outputs
 //class CScript : public CScriptBase
+#[derive(Clone)]
 pub struct CScript {
 
     pub v: Vec<u8>,
