@@ -102,7 +102,7 @@ pub struct CTxOut {
 }
 
 impl CTxOut {
-    pub fn SetNull(self)
+    pub fn SetNull(mut self)
     {
         self.nValue = -1;
         self.scriptPubKey.clear();
@@ -120,8 +120,8 @@ pub struct CTransaction {
 impl CTransaction {
     const CURRENT_VERSION: i32 = 2;
 
-    pub fn GetHash<'a>(&'a self) -> &'a H256
+    pub fn GetHash(self) -> H256
     {
-        &self.hash
+        self.hash.clone()
     }
 }

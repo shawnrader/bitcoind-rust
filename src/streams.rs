@@ -16,7 +16,7 @@ impl CDataStream {
 impl<T> Shl<T> for CDataStream {
     type Output = Self;
 
-    fn shl(self, rhs:T) -> Self::Output
+    fn shl(self, _rhs:T) -> Self::Output
     {
         // TODO: figure out what to do here
         //Serialize(self.S, rhs);

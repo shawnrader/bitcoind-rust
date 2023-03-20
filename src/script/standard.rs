@@ -51,11 +51,11 @@ fn MatchPayToPubkey(script: &CScript, pubkey: &mut valtype) -> bool
     return false;
 }
 
-fn MatchPayToPubkeyHash(script: &CScript, pubkeyhash: &valtype) -> bool
+fn MatchPayToPubkeyHash(script: &CScript, pubkeyhash: &mut valtype) -> bool
 {
     if script.v.len() == 25 && script.v[0] == opcodetype::OP_DUP as u8 && script.v[1] == opcodetype::OP_HASH160 as u8 &&
         script.v[2] == 20 && script.v[23] == opcodetype::OP_EQUALVERIFY as u8 && script.v[24] == opcodetype::OP_CHECKSIG as u8 {
-        pubkeyhash = &script.v[3..23].to_vec();
+        *pubkeyhash = script.v[3..23].to_vec();
         return true;
     }
     return false;
@@ -147,7 +147,7 @@ pub fn Solver(scriptPubKey: &CScript, vSolutionsRet: &mut Vec<Vec<u8>>) -> Txout
     }
     let mut witnessversion: i32;
     let mut witnessprogram: Vec<u8>;
-    if scriptPubKey.IsWitnessProgram(witnessversion, &mut witnessprogram) {
+    if scriptPubKey.IsWitnessProgram(&mut witnessversion, &mut witnessprogram) {
         if witnessversion == 0 && witnessprogram.len() == WITNESS_V0_KEYHASH_SIZE {
             //vSolutionsRet.push_back(std::move(witnessprogram));
             vSolutionsRet.push(witnessprogram);
@@ -187,7 +187,7 @@ pub fn Solver(scriptPubKey: &CScript, vSolutionsRet: &mut Vec<Vec<u8>>) -> Txout
         return TxoutType::PUBKEY;
     }
 
-    if MatchPayToPubkeyHash(scriptPubKey, &data) {
+    if MatchPayToPubkeyHash(scriptPubKey, &mut data) {
         vSolutionsRet.push(data);
         return TxoutType::PUBKEYHASH;
     }

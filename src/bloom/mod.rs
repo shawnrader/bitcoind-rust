@@ -1,7 +1,7 @@
 
 use super::script::{opcodetype, standard::TxoutType, standard::Solver};
 use super::hash::MurmurHash3;
-use super::primitives::transaction::{COutPoint, CTransaction, CTxOut};
+use super::primitives::transaction::{COutPoint, CTransaction};
 use super::streams::CDataStream;
 use super::serialize::SER;
 use super::version::PROTOCOL_VERSION;
@@ -110,7 +110,7 @@ impl CBloomFilter {
         if self.vData.is_empty() { // zero-size = "match-all" filter
             return true;
         }
-        let hash: &H256 = tx.GetHash();
+        let hash: H256 = tx.GetHash();
         if self.contains_slice(hash.as_bytes()) {
             fFound = true;
         }
@@ -118,7 +118,7 @@ impl CBloomFilter {
 
         for i in 0..tx.vout.len()
         {
-            let mut txout = &mut tx.vout[i];
+            let txout = &mut tx.vout[i];
             // Match if the filter contains any arbitrary script data element in any scriptPubKey in tx
             // If this matches, also add the specific output that was matched.
             // This means clients don't have to update the filter themselves when a new relevant tx

@@ -316,14 +316,14 @@ impl CScriptNum {
 
 }
 
-
+#[allow(unused_assignments)]
 //bool GetScriptOp(CScriptBase::const_iterator& pc, CScriptBase::const_iterator end, opcodetype& opcodeRet, std::vector<unsigned char>* pvchRet)
 /// Return opcode, slice to start of next op, slice to push data
-fn GetScriptOp<'a>(pc: &'a mut [u8], opcodeRet: &mut opcodetype, pvchRet: &'a mut [u8]) -> bool
+fn GetScriptOp<'a>(pc: &'a mut [u8], opcodeRet: &mut opcodetype, _pvchRet: &'a mut [u8]) -> bool
 {
-    let mut opcodeRet: opcodetype = OP_INVALIDOPCODE;
-    let mut slice = pc;
     let mut nSize: u32 = 0;
+   
+    *opcodeRet = OP_INVALIDOPCODE;
 
     //if (pvchRet)
     //    pvchRet->clear();
@@ -336,7 +336,7 @@ fn GetScriptOp<'a>(pc: &'a mut [u8], opcodeRet: &mut opcodetype, pvchRet: &'a mu
     //    return false;
     //unsigned int opcode = *pc++;
     let opcode: opcodetype = unsafe { std::mem::transmute(pc[0])};
-    slice = &mut pc[1..];
+    let mut slice = &mut pc[1..];
 
     // Immediate operand
     if opcode <= OP_PUSHDATA4
@@ -391,9 +391,9 @@ fn GetScriptOp<'a>(pc: &'a mut [u8], opcodeRet: &mut opcodetype, pvchRet: &'a mu
 
     //opcodeRet = static_cast<opcodetype>(opcode);
     //pvchRet.copy_from_slice(slice[0..nSize as usize]);
-    pvchRet = &mut slice[0..nSize as usize];
+    _pvchRet = &mut slice[0..nSize as usize];
     pc = &mut slice[nSize as usize..];
-    opcodeRet = opcode;
+    *opcodeRet = opcode;
     return true;
 
 }
@@ -507,7 +507,7 @@ impl CScript
      *  ... OP_N CHECKMULTISIG ...
      */
     //unsigned int CScript::GetSigOpCount(bool fAccurate) const
-    pub fn GetSigOpCount(self, fAccurate: bool) -> i32
+    pub fn GetSigOpCount(mut self, fAccurate: bool) -> i32
     {
         let mut n: i32 = 0;
         //const_iterator pc = begin();
@@ -518,7 +518,10 @@ impl CScript
         {
             let mut pvchRet: &mut [u8];
             let mut opcode: opcodetype;
-            let r = self.GetOp(pc, &mut opcode, pvchRet);
+            if self.GetOp(pc, &mut opcode, pvchRet) == false
+            {
+                break;
+            }
             if opcode == OP_CHECKSIG || opcode == OP_CHECKSIGVERIFY
             {
                 n += 1;
@@ -568,7 +571,7 @@ impl CScript
     // A witness program is any valid CScript that consists of a 1-byte push opcode
     // followed by a data push between 2 and 40 bytes.
     //bool CScript::IsWitnessProgram(int& version, std::vector<unsigned char>& program) const
-    pub fn IsWitnessProgram(self, version: i32, program: &mut [u8] ) -> bool
+    pub fn IsWitnessProgram(self, version: &mut i32, program: &mut [u8] ) -> bool
     {
         if self.v.len() < 4 || self.v.len() > 42
         {
@@ -583,7 +586,7 @@ impl CScript
         if (self.v[1] as usize + 2) == self.v.len()
         {
             let opcode: opcodetype = unsafe { std::mem::transmute(self.v[0])};
-            version = CScript::DecodeOP_N(opcode);
+            *version = CScript::DecodeOP_N(opcode);
             //program = std::vector<unsigned char>(this->begin() + 2, this->end());
             program.clone_from_slice(&self.v[2.. ]);
             return true;

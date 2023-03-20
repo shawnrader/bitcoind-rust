@@ -25,8 +25,6 @@ pub fn MurmurHash3(nHashSeed: u32, vDataToHash: &[u8]) -> u32
     //----------
     // body
     //const uint8_t* blocks = vDataToHash.data();
-
-    let b = vDataToHash.iter();
     
     for i in 0 .. nblocks {
         // uint32_t k1 = ReadLE32(blocks + i*4);
@@ -234,7 +232,7 @@ impl HashWriter {
 impl<T> Shl<T> for HashWriter {
     type Output = Self;
 
-    fn shl(self, rhs:T) -> Self::Output
+    fn shl(self, _rhs:T) -> Self::Output
     {
         // TODO: figure out what to do here
         //Serialize(self.S, rhs);
@@ -272,7 +270,7 @@ impl CHashWriter {
 impl<T> Shl<T> for CHashWriter {
     type Output = Self;
 
-    fn shl(self, rhs:T) -> Self::Output
+    fn shl(self, _rhs:T) -> Self::Output
     {
         // TODO: figure out what to do here
         //Serialize(self.S, rhs);
@@ -320,7 +318,7 @@ impl <'a, T: Read>CHashVerifier<'a, T>  {
 impl<T> Shr<T> for CHashVerifier<'_, T> {
     type Output = Self;
 
-    fn shr(self, rhs:T) -> Self::Output
+    fn shr(self, _rhs:T) -> Self::Output
     {
         // TODO: figure out what to do here
         //Unserialize(self.S, rhs);

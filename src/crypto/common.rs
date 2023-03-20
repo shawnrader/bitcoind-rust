@@ -1,4 +1,4 @@
-use byteorder::{ByteOrder, BigEndian, LittleEndian, WriteBytesExt};
+use byteorder::{ByteOrder, BigEndian, LittleEndian};
 
 //uint16_t static inline ReadLE16(const unsigned char* ptr)
 /*{
