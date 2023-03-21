@@ -7,6 +7,7 @@ use crate::script::{CScript, CScriptNum, OP_FALSE};
 use crate::script::interpreter::*;
 use crate::script::opcodetype;
 use crate::pubkey;
+use std::cell::RefCell;
 
 #[derive(PartialEq)]
 pub enum TxoutType {
@@ -70,7 +71,7 @@ fn IsSmallInteger(opcode: opcodetype) -> bool
 /** Retrieve a minimally-encoded number in range [min,max] from an (opcode, data) pair,
  *  whether it's OP_n or through a push. */
 //static std::optional<int> GetScriptNumber(opcodetype opcode, valtype data, int min, int max)
-fn GetScriptNumber(opcode: opcodetype, data: valtype, min: i32, max: i32) -> Option<i32>
+fn GetScriptNumber(opcode: &opcodetype, data: &valtype, min: i32, max: i32) -> Option<i32>
 {
     let count: i32;
     if IsSmallInteger(opcode.clone()) {
@@ -90,11 +91,13 @@ fn GetScriptNumber(opcode: opcodetype, data: valtype, min: i32, max: i32) -> Opt
     return Some(count);
 }
 
-fn MatchMultisig(script: &mut CScript, required_sigs: &mut i32, pubkeys: &Vec<valtype>) -> bool
+fn MatchMultisig(script: &mut CScript, required_sigs: &mut i32, pubkeys: &mut Vec<valtype>) -> bool
 {
-    let mut opcode: opcodetype;
-    let mut data: valtype;
-    let mut it = script.v.as_mut_slice();
+    let mut opcode = opcodetype::OP_INVALIDOPCODE;
+    let mut data: valtype = vec![];
+    //let mut it = script.v.as_mut_slice();
+    let v = RefCell::new(script.v.clone());
+
 
     //CScript::const_iterator it = script.begin();
     if script.v.len() < 1
@@ -107,19 +110,21 @@ fn MatchMultisig(script: &mut CScript, required_sigs: &mut i32, pubkeys: &Vec<va
         return false;
     }
 
+    let mut binding = v.borrow_mut();
+    let mut it = binding.as_mut_slice();
     if !script.GetOp(&mut it, &mut opcode, &mut data[0..]) {
         return false;
     }
-    let req_sigs = GetScriptNumber(opcode, data, 1, super::MAX_PUBKEYS_PER_MULTISIG);
+    let req_sigs = GetScriptNumber(&opcode, &data, 1, super::MAX_PUBKEYS_PER_MULTISIG);
     if req_sigs == None {
         return false;
     }
     *required_sigs = req_sigs.unwrap();
-    while script.GetOp(&mut it, &mut opcode, &mut data) && pubkey::ValidSize(&data)
+    while script.GetOp(&mut it, &mut opcode, &mut data[0..]) && pubkey::ValidSize(&data)
     {
-        pubkeys.push(data);
+        pubkeys.push(data.clone());
     }
-    let num_keys = GetScriptNumber(opcode, data, *required_sigs, super::MAX_PUBKEYS_PER_MULTISIG);
+    let num_keys = GetScriptNumber(&opcode, &data, *required_sigs, super::MAX_PUBKEYS_PER_MULTISIG);
     if num_keys == None
     {
         return false;
