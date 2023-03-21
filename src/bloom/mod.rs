@@ -150,7 +150,8 @@ impl CBloomFilter {
                     else if (self.nFlags & bloomflags::BLOOM_UPDATE_MASK as u8) == bloomflags::BLOOM_UPDATE_P2PUBKEY_ONLY as u8
                     {
                         let mut vSolutions: Vec<Vec<u8>> = vec![];
-                        let txout_type: TxoutType = Solver(&txout.scriptPubKey, &mut vSolutions);
+                        let mut scriptPubKey = &mut vout.borrow_mut().scriptPubKey;
+                        let txout_type: TxoutType = Solver(&mut scriptPubKey, &mut vSolutions);
                         if txout_type == TxoutType::PUBKEY || txout_type == TxoutType::MULTISIG
                         {
                             self.insert(&COutPoint { hash, n:i as u32 } );
