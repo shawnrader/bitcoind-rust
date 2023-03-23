@@ -90,7 +90,7 @@ impl CHash256 {
         assert!(output.len() == CHash256::OUTPUT_SIZE);
         let mut buf: [u8; CSHA256::OUTPUT_SIZE] = [0; CSHA256::OUTPUT_SIZE];
         self.sha.Finalize(&mut buf);
-        self.sha.Reset().Write(&buf, CSHA256::OUTPUT_SIZE).Finalize(&mut buf);
+        self.sha.Reset().Write(&mut buf, CSHA256::OUTPUT_SIZE).Finalize(&mut buf);
 
     }
 

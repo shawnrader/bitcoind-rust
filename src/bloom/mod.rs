@@ -143,7 +143,7 @@ impl CBloomFilter {
                     fFound = true;
                     if (self.nFlags & bloomflags::BLOOM_UPDATE_MASK as u8) == bloomflags::BLOOM_UPDATE_ALL as u8
                     {
-                        let cout = COutPoint{hash, n: i as u32};
+                        let cout = COutPoint::new(hash, i as u32);
                         self.insert(&cout);
                     }
                     else if (self.nFlags & bloomflags::BLOOM_UPDATE_MASK as u8) == bloomflags::BLOOM_UPDATE_P2PUBKEY_ONLY as u8
@@ -153,7 +153,7 @@ impl CBloomFilter {
                         let txout_type: TxoutType = Solver(&mut scriptPubKey, &mut vSolutions);
                         if txout_type == TxoutType::PUBKEY || txout_type == TxoutType::MULTISIG
                         {
-                            self.insert(&COutPoint { hash, n:i as u32 } );
+                            self.insert(&COutPoint::new(hash, i as u32 ) );
                         }
                     }
                     break;
