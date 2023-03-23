@@ -115,6 +115,11 @@ struct CHash160 {
 
 impl CHash160 {
     const OUTPUT_SIZE:usize = 20;
+
+    pub fn new() -> Self {
+        Self { sha: CSHA256::new() }
+    }
+
     //void Finalize(Span<unsigned char> output) {
     pub fn finalize(&mut self, output: &mut [u8]) {
         assert!(output.len() == CHash256::OUTPUT_SIZE);
@@ -143,7 +148,7 @@ impl CHash160 {
 //inline uint256 Hash(const T& in1)
 fn Hash<T: AsBytes>(in1:&T) -> U256
 {
-    let h256 = CHash256::new();
+    let mut h256 = CHash256::new();
     let mut result: [u8; 64] = [0; 64];
     h256.write(&in1.as_bytes()).finalize(&mut result);
     U256::from_little_endian(&result)
@@ -154,7 +159,7 @@ fn Hash<T: AsBytes>(in1:&T) -> U256
 //inline uint256 Hash(const T1& in1, const T2& in2) {
 fn HashCat<T1: AsBytes,T2: AsBytes>(in1: &T1, in2: &T2) -> U256 {
     let mut result: [u8; 64] = [0; 64];
-    let h256 = CHash256::new();
+    let mut h256 = CHash256::new();
     // Hash256().Write(MakeUCharSpan(in1)).Write(MakeUCharSpan(in2)).Finalize(result);
     h256.write(&in1.as_bytes());
     h256.write(&in2.as_bytes());
@@ -169,7 +174,7 @@ fn Hash160<T1: AsBytes>(in1: &T1) -> H160
 {
     let mut result: [u8; 64] = [0; 64];
     //Hash160().Write(MakeUCharSpan(in1)).Finalize(result);
-    let h160 :CHash160;
+    let mut h160 = CHash160::new();
     h160.write(&in1.as_bytes()).finalize(&mut result);
     H160::from_slice(&result)
 }
@@ -180,7 +185,7 @@ struct HashWriter {
 
 impl HashWriter {
     //void write(Span<const std::byte> src)
-    pub fn write(self, src: &[u8])
+    pub fn write(&mut self, src: &[u8])
     {
         //self.ctx.Write(UCharCast(src.data()), src.size());
         self.ctx.Write(src, src.len());
@@ -191,8 +196,8 @@ impl HashWriter {
      * Invalidates this object.
      */
     //uint256 GetHash() {
-    pub fn GetHash(self) -> H256 {
-        let result: [u8; CSHA256::OUTPUT_SIZE] = [0; CSHA256::OUTPUT_SIZE as usize];
+    pub fn GetHash(&mut self) -> H256 {
+        let mut result: [u8; CSHA256::OUTPUT_SIZE] = [0; CSHA256::OUTPUT_SIZE as usize];
         self.ctx.Finalize(&mut result);
         self.ctx.Reset().Write(&mut result, CSHA256::OUTPUT_SIZE).Finalize(&mut result);
         return H256::from(result);
@@ -203,8 +208,8 @@ impl HashWriter {
      * Invalidates this object.
      */
     //uint256 GetSHA256() {
-    pub fn GetSHA256(self) -> H256 {
-        let result: [u8; CSHA256::OUTPUT_SIZE] = [0; CSHA256::OUTPUT_SIZE as usize];
+    pub fn GetSHA256(&mut self) -> H256 {
+        let mut result: [u8; CSHA256::OUTPUT_SIZE] = [0; CSHA256::OUTPUT_SIZE as usize];
         self.ctx.Finalize(&mut result);
         return H256::from(result);
     }
@@ -213,7 +218,7 @@ impl HashWriter {
      * Returns the first 64 bits from the resulting hash.
      */
     //inline uint64_t GetCheapHash() {
-    pub fn GetCheapHash(self) -> u64 {
+    pub fn GetCheapHash(&mut self) -> u64 {
         let result = self.GetHash();
         //return ReadLE64(result.begin());
         result.to_low_u64_le()
@@ -280,20 +285,20 @@ impl<T> Shl<T> for CHashWriter {
 }
 
 struct CHashVerifier<'a, T> {
-    source:&'a T,
+    source:&'a mut T,
     hashWriter: HashWriter,
 }
 
 impl <'a, T: Read>CHashVerifier<'a, T>  {
     //void read(Span<std::byte> dst)
-    pub fn read(self, dst: &mut [u8])
+    pub fn read(&mut self, dst: &mut [u8])
     {
         self.source.read(dst);
         self.hashWriter.write(dst);
     }
 
     //void ignore(size_t nSize)
-    fn ignore (self, nSize: usize)
+    fn ignore (&mut self, mut nSize: usize)
     {
         //std::byte data[1024];
         let mut data: [u8; 1024] = [0; 1024];
