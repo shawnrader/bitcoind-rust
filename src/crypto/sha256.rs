@@ -17,7 +17,7 @@ impl CSHA256 {
         Self {s, buf,  bytes: 0}
     }
 
-    pub fn Write(self, mut data: &[u8], len: usize) -> Self
+    pub fn Write(&mut self, mut data: &[u8], len: usize) -> Self
     {
         //const unsigned char* end = data + len;
         let bufsize: usize = (self.bytes % 64) as usize;
@@ -52,10 +52,10 @@ impl CSHA256 {
             //bytes += end - data;
             self.bytes += data.len() as u64;
         }
-        self
+        *self
     }
 
-    pub fn Finalize(self, hash: &mut [u8; CSHA256::OUTPUT_SIZE])
+    pub fn Finalize(&mut self, hash: &mut [u8; CSHA256::OUTPUT_SIZE])
     {
         //static const unsigned char pad[64] = {0x80};
         let pad: [u8; 64] = [0x80; 64];
@@ -74,11 +74,11 @@ impl CSHA256 {
         WriteBE32(&mut hash[28..32], self.s[7]);
     }
 
-    pub fn Reset(self) -> Self
+    pub fn Reset(&mut self) -> Self
     {
         self.bytes = 0;
         Initialize(&mut self.s);
-        self
+        *self
     }    
 
 }

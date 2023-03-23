@@ -86,23 +86,23 @@ impl CHash256 {
     }
 
     // void Finalize(Span<unsigned char> output) {
-    pub fn finalize(self, output: &mut [u8]) {
+    pub fn finalize(&mut self, output: &mut [u8]) {
         assert!(output.len() == CHash256::OUTPUT_SIZE);
-        let mut buf: [u8; CSHA256::OUTPUT_SIZE];
+        let mut buf: [u8; CSHA256::OUTPUT_SIZE] = [0; CSHA256::OUTPUT_SIZE];
         self.sha.Finalize(&mut buf);
         self.sha.Reset().Write(&buf, CSHA256::OUTPUT_SIZE).Finalize(&mut buf);
 
     }
 
     //CHash256& Write(Span<const unsigned char> input) {
-    pub fn write(self, input: &[u8]) -> Self {
+    pub fn write(&mut self, input: &[u8]) -> &mut Self {
         //self.sha.Write(input.data(), input.size());
         self.sha.Write(input, input.len());
         self
     }
 
     // CHash256& Reset() {
-    pub fn reset(self) -> Self {
+    pub fn reset(&mut self) -> &mut Self {
         self.sha.Reset();
         self
     }        
@@ -116,23 +116,23 @@ struct CHash160 {
 impl CHash160 {
     const OUTPUT_SIZE:usize = 20;
     //void Finalize(Span<unsigned char> output) {
-    pub fn finalize(self, output: &mut [u8]) {
+    pub fn finalize(&mut self, output: &mut [u8]) {
         assert!(output.len() == CHash256::OUTPUT_SIZE);
         // unsigned char buf[CSHA256::OUTPUT_SIZE];
-        let mut buf: [u8; CSHA256::OUTPUT_SIZE];
+        let mut buf: [u8; CSHA256::OUTPUT_SIZE] = [0; CSHA256::OUTPUT_SIZE];
         self.sha.Finalize(&mut buf);
         todo!();
         //CRIPEMD160::Write(buf, CSHA256::OUTPUT_SIZE).Finalize(output.data());
     }
 
     //CHash160& Write(Span<const unsigned char> input) {
-    pub fn write(self, input: &[u8]) -> Self {
+    pub fn write(&mut self, input: &[u8]) -> &mut Self {
         self.sha.Write(input, input.len());
         self
     }
 
     //CHash160& Reset() {
-    pub fn reset(self) -> Self {
+    pub fn reset(&mut self) -> &mut Self {
         self.sha.Reset();
         self
     } 
