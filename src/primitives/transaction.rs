@@ -15,7 +15,7 @@ impl COutPoint
     const NULL_INDEX: u32 = u32::MAX;
 
     // COutPoint(const uint256& hashIn, uint32_t nIn): hash(hashIn), n(nIn) { }
-    pub fn new(self, hashIn: &H256, nIn: u32)
+    pub fn new(&mut self, hashIn: &H256, nIn: u32)
     {
         self.hash = *hashIn;
         self.n = nIn;
@@ -24,7 +24,7 @@ impl COutPoint
     // TODO: SERIALIZE_METHODS(COutPoint, obj) { READWRITE(obj.hash, obj.n); }
 
     // void SetNull() { hash.SetNull(); n = NULL_INDEX; }
-    pub fn SetNull(self)
+    pub fn SetNull(&mut self)
     {
         self.hash = H256::zero();
         self.n = COutPoint::NULL_INDEX;
