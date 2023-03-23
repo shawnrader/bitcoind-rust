@@ -1,6 +1,7 @@
 pub mod standard;
 pub mod interpreter;
-use std::ops::Shl;
+use std::ops::ShlAssign;
+
 
 // Maximum number of bytes pushable to the stack
 const MAX_SCRIPT_ELEMENT_SIZE:i32 = 520;
@@ -279,7 +280,7 @@ impl CScriptNum {
         }
 
         let neg: bool = value < 0;
-        let absvalue: u64 = if neg { !(value as u64) + 1 } else { value as u64 };
+        let mut absvalue: u64 = if neg { !(value as u64) + 1 } else { value as u64 };
 
         while absvalue != 0
         {
@@ -319,7 +320,7 @@ impl CScriptNum {
 #[allow(unused_assignments)]
 //bool GetScriptOp(CScriptBase::const_iterator& pc, CScriptBase::const_iterator end, opcodetype& opcodeRet, std::vector<unsigned char>* pvchRet)
 /// Return opcode, slice to start of next op, slice to push data
-fn GetScriptOp<'a>(pc: &'a mut [u8], opcodeRet: &mut opcodetype, _pvchRet: &'a mut [u8]) -> bool
+fn GetScriptOp<'a>(mut pc: &'a mut [u8], opcodeRet: &mut opcodetype, mut _pvchRet: &'a [u8]) -> bool
 {
     let mut nSize: u32 = 0;
    
@@ -343,7 +344,7 @@ fn GetScriptOp<'a>(pc: &'a mut [u8], opcodeRet: &mut opcodetype, _pvchRet: &'a m
     {
         if opcode < OP_PUSHDATA1
         {
-            nSize = opcode as u32;
+            nSize = opcode.clone() as u32;
         }
         else if opcode == OP_PUSHDATA1
         {
@@ -391,8 +392,9 @@ fn GetScriptOp<'a>(pc: &'a mut [u8], opcodeRet: &mut opcodetype, _pvchRet: &'a m
 
     //opcodeRet = static_cast<opcodetype>(opcode);
     //pvchRet.copy_from_slice(slice[0..nSize as usize]);
-    _pvchRet = &mut slice[0..nSize as usize];
-    pc = &mut slice[nSize as usize..];
+    //pc = &mut slice[nSize as usize..];
+    //_pvchRet = &slice[0..nSize as usize];
+    (_pvchRet, pc) = slice.split_at_mut(nSize as usize);
     *opcodeRet = opcode;
     return true;
 
@@ -421,7 +423,7 @@ impl CScript
 
 
     // CScript& push_int64(int64_t n)
-    fn push_int64(self, n: i64)
+    fn push_int64(&mut self, n: i64) -> &mut CScript
     {
         if n == -1 || (n >= 1 && n <= 16)
         {
@@ -433,8 +435,9 @@ impl CScript
         }
         else
         {
-            self << CScriptNum::serialize(n);
+            *self <<= CScriptNum::serialize(n);
         }
+        self
     }
 
 // public:
@@ -453,9 +456,9 @@ impl CScript
     // e.g. via prevector
     //explicit CScript(const std::vector<unsigned char>& b) = delete;
 
-    pub fn new(self, b: i64)
+    pub fn new(&mut self, b: i64)
     {
-        self << b;
+        *self <<= b;
     }
 
     /** Delete non-existent operator to defend against future introduction */
@@ -466,7 +469,8 @@ impl CScript
     {
         return GetScriptOp(pc, end(), opcodeRet, &vchRet);
     }*/
-    pub fn GetOp(&self, pc: &mut [u8], opcodeRet: &mut opcodetype, pvchRet: &mut [u8]) -> bool
+    #[allow(unused_mut)]
+    pub fn GetOp(mut pc: &mut [u8], opcodeRet: &mut opcodetype, pvchRet: &mut [u8]) -> bool
     {
         GetScriptOp(pc, opcodeRet, pvchRet)
     }
@@ -508,7 +512,8 @@ impl CScript
      *  ... OP_N CHECKMULTISIG ...
      */
     //unsigned int CScript::GetSigOpCount(bool fAccurate) const
-    pub fn GetSigOpCount(mut self, fAccurate: bool) -> i32
+    #[allow(unused_mut)]
+    pub fn GetSigOpCount(&mut self, fAccurate: bool) -> i32
     {
         let mut n: i32 = 0;
         //const_iterator pc = begin();
@@ -517,9 +522,9 @@ impl CScript
         let mut lastOpcode: opcodetype = OP_INVALIDOPCODE;
         while pc.len() > 0
         {
-            let mut pvchRet: &mut [u8];
-            let mut opcode: opcodetype;
-            if self.GetOp(pc, &mut opcode, pvchRet) == false
+            let mut pvchRet: &mut [u8] = &mut [0];
+            let mut opcode: opcodetype = opcodetype::OP_INVALIDOPCODE;
+            if CScript::GetOp(pc, &mut opcode, pvchRet) == false
             {
                 break;
             }
@@ -551,7 +556,7 @@ impl CScript
     //unsigned int GetSigOpCount(const CScript& scriptSig) const;
 
     //bool IsPayToScriptHash() const;
-    pub fn IsPayToScriptHash(self) -> bool
+    pub fn IsPayToScriptHash(&self) -> bool
     {
         // Extra-fast test for pay-to-script-hash CScripts:
         self.v.len() == 23 &&
@@ -561,7 +566,7 @@ impl CScript
     }
     
     //bool IsPayToWitnessScriptHash() const;
-    pub fn IsPayToWitnessScriptHash(self) -> bool
+    pub fn IsPayToWitnessScriptHash(&self) -> bool
     {
         // Extra-fast test for pay-to-witness-script-hash CScripts:
         self.v.len() == 34 &&
@@ -572,7 +577,7 @@ impl CScript
     // A witness program is any valid CScript that consists of a 1-byte push opcode
     // followed by a data push between 2 and 40 bytes.
     //bool CScript::IsWitnessProgram(int& version, std::vector<unsigned char>& program) const
-    pub fn IsWitnessProgram(self, version: &mut i32, program: &mut [u8] ) -> bool
+    pub fn IsWitnessProgram(&self, version: &mut i32, program: &mut [u8] ) -> bool
     {
         if self.v.len() < 4 || self.v.len() > 42
         {
@@ -598,13 +603,13 @@ impl CScript
     /** Called by IsStandardTx and P2SH/BIP62 VerifyScript (which makes it consensus-critical). */
     //bool IsPushOnly() const;
     //bool CScript::IsPushOnly(const_iterator pc) const
-    pub fn IsPushOnly(self, mut pc: &mut [u8]) -> bool
+    pub fn IsPushOnly(pc: &mut [u8]) -> bool
     {
         while pc.len() > 0
         {
-            let mut opcode: opcodetype;
-            let mut pvchRet: &mut [u8];
-            if self.GetOp(pc, &mut opcode, pvchRet)
+            let mut opcode = opcodetype::OP_INVALIDOPCODE;
+            let mut pvchRet:&mut [u8] = &mut [0];
+            if CScript::GetOp(pc, &mut opcode, &mut pvchRet)
             {
                 // Note that IsPushOnly() *does* consider OP_RESERVED to be a
                 // push-type opcode, however execution of OP_RESERVED fails, so
@@ -632,12 +637,12 @@ impl CScript
      * instantly when entering the UTXO set.
      */
     //bool IsUnspendable() const
-    pub fn IsUnspendable(self) -> bool
+    pub fn IsUnspendable(&self) -> bool
     {
         (self.v.len() > 0 && self.v[0] == OP_RETURN as u8) || (self.v.len() > MAX_SCRIPT_SIZE as usize)
     }
 
-    pub fn clear(self)
+    pub fn clear(&mut self)
     {
         // The default prevector::clear() does not release memory
         self.v.clear();
@@ -647,12 +652,10 @@ impl CScript
 
 
 //CScript& operator<<(int64_t b) LIFETIMEBOUND { return push_int64(b); }
-impl Shl<i64> for CScript {
-    type Output = Self;
+impl ShlAssign<i64> for CScript {
 
-    fn shl(self, b: i64) -> Self {
+    fn shl_assign(&mut self, b: i64) {
         self.push_int64(b);
-        self
     }
 }
 
@@ -665,14 +668,13 @@ impl Shl<i64> for CScript {
        return *this;
    }
 */
-impl Shl<opcodetype> for CScript {
-    type Output = Self;
+impl ShlAssign<opcodetype> for CScript {
 
-    fn shl(self, opcode: opcodetype) -> Self
+    fn shl_assign(&mut self, opcode: opcodetype)
     {
-        assert!(((opcode as u8) < 0) || ((opcode as u8) > 0xff));
-        self.v.insert(0, opcode as u8);
-        self
+        let code = opcode as u8;
+        assert!((code < 0) || (code as u8 > 0xff));
+        self.v.insert(0, code);
     }
 }
 
@@ -685,13 +687,11 @@ impl Shl<opcodetype> for CScript {
    }
 */
 
-impl Shl<CScriptNum> for CScript {
-    type Output = Self;
+impl ShlAssign<CScriptNum> for CScript {
 
-    fn shl(self, b: CScriptNum) -> Self
+    fn shl_assign(&mut self, b: CScriptNum)
     {
-        self << b.getvch();
-        self
+        *self <<= b.getvch();
     }
 }
 
@@ -725,10 +725,9 @@ impl Shl<CScriptNum> for CScript {
        return *this;
    }
 */
-impl Shl<Vec<u8>> for CScript {
-    type Output = Self;
+impl ShlAssign<Vec<u8>> for CScript {
 
-    fn shl(self, b: Vec<u8>) -> Self
+    fn shl_assign(&mut self, b: Vec<u8>)
     {
         if b.len() < OP_PUSHDATA1 as usize
         {
@@ -750,7 +749,7 @@ impl Shl<Vec<u8>> for CScript {
             //uint8_t _data[2];
             //WriteLE16(_data, b.size());
             //insert(end(), _data, _data + sizeof(_data));
-            self.v.append(&mut b);
+            self.v.append(&mut b.clone());
         }
         else
         {
@@ -759,11 +758,10 @@ impl Shl<Vec<u8>> for CScript {
             //uint8_t _data[4];
             //WriteLE32(_data, b.size());
             //insert(end(), _data, _data + sizeof(_data));
-            self.v.append(&mut b);
+            self.v.append(&mut b.clone());
         }
         //insert(end(), b.begin(), b.end());
         //return *this;
-        self
     }
 }
 
@@ -772,7 +770,7 @@ impl Shl<Vec<u8>> for CScript {
 pub fn CheckMinimalPush(data: &[u8], opcode: opcodetype) -> bool
 {
     // Excludes OP_1NEGATE, OP_1-16 since they are by definition minimal
-    assert!(0 <= opcode as u8 && opcode <= OP_PUSHDATA4);
+    assert!(0 <= opcode.clone() as u8 && opcode <= OP_PUSHDATA4);
     if data.len() == 0 {
         // Should have used OP_0.
         return opcode == OP_0;

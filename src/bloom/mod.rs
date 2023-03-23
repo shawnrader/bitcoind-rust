@@ -1,5 +1,5 @@
 
-use super::script::{opcodetype, standard::TxoutType, standard::Solver};
+use super::script::{opcodetype, standard::TxoutType, standard::Solver, CScript};
 use super::hash::MurmurHash3;
 use super::primitives::transaction::{COutPoint, CTransaction};
 use super::streams::CDataStream;
@@ -120,7 +120,6 @@ impl CBloomFilter {
         for i in 0..tx.vout.len()
         {
             let vout = RefCell::new(tx.vout[i].clone());
-            let txout = vout.borrow_mut();
             // Match if the filter contains any arbitrary script data element in any scriptPubKey in tx
             // If this matches, also add the specific output that was matched.
             // This means clients don't have to update the filter themselves when a new relevant tx
@@ -134,7 +133,7 @@ impl CBloomFilter {
             {
                 let mut opcode: opcodetype = opcodetype::OP_INVALIDOPCODE;
 
-                if !txout.scriptPubKey.GetOp(&mut pc, &mut opcode, &mut data)
+                if !CScript::GetOp(&mut pc, &mut opcode, &mut data)
                 {
                     break;
                 }
@@ -183,7 +182,7 @@ impl CBloomFilter {
             while pc.len() > 0
             {
                 let mut opcode: opcodetype = opcodetype::OP_INVALIDOPCODE;
-                if !scriptSig.borrow_mut().GetOp(pc, &mut opcode, &mut data)
+                if !CScript::GetOp(pc, &mut opcode, &mut data)
                 {
                     break;
                 }
