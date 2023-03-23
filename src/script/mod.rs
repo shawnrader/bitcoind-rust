@@ -456,9 +456,10 @@ impl CScript
     // e.g. via prevector
     //explicit CScript(const std::vector<unsigned char>& b) = delete;
 
-    pub fn new(&mut self, b: i64)
+    pub fn new(b: i64)
     {
-        *self <<= b;
+       let mut s = Self{v:vec![]};
+       s <<= b;
     }
 
     /** Delete non-existent operator to defend against future introduction */
@@ -791,4 +792,17 @@ pub fn CheckMinimalPush(data: &[u8], opcode: opcodetype) -> bool
         return opcode == OP_PUSHDATA2;
     }
     return true;
+}
+
+#[cfg(test)]
+
+mod tests {
+    use super::CScript;
+    
+    #[test]
+    fn test_GetSigOpCount() {
+        let mut s1: CScript = CScript{v: vec![]};
+        assert_eq!(s1.GetSigOpCount(false), 0);
+        assert_eq!(s1.GetSigOpCount(true), 0);
+    }
 }
