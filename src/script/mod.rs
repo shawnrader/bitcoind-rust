@@ -2,7 +2,6 @@ pub mod standard;
 pub mod interpreter;
 use std::ops::ShlAssign;
 
-
 // Maximum number of bytes pushable to the stack
 const MAX_SCRIPT_ELEMENT_SIZE:i32 = 520;
 
@@ -798,11 +797,22 @@ pub fn CheckMinimalPush(data: &[u8], opcode: opcodetype) -> bool
 
 mod tests {
     use super::CScript;
+    use primitive_types::H160;
+    use super::opcodetype::*;
     
     #[test]
     fn test_GetSigOpCount() {
         let mut s1: CScript = CScript{v: vec![]};
         assert_eq!(s1.GetSigOpCount(false), 0);
         assert_eq!(s1.GetSigOpCount(true), 0);
+
+        let mut dummy = H160::zero();
+        //s1 << OP_1 << ToByteVector(dummy) << ToByteVector(dummy) << OP_2 << OP_CHECKMULTISIG;
+        //s1 <<= OP_1 <<= dummy <<= dummy <<= OP_2 <<= OP_CHECKMULTISIG;
+        //dummy <<= OP_2 <<= OP_CHECKMULTISIG;
+        //assert_eq!(s1.GetSigOpCount(true), 2);
+        //s1 << OP_IF << OP_CHECKSIG << OP_ENDIF;
+        //assert_eq!(s1.GetSigOpCount(true), 3);
+        //assert_eq!(s1.GetSigOpCount(false), 21);
     }
 }
