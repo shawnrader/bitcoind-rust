@@ -64,7 +64,7 @@ impl Ser {
 trait Serializer {
     fn ser(&self) -> Ser;
     fn deser(&mut self, data: &[u8]) -> Result<(), String>;
-    fn ser_push(&mut self, s: &Ser) -> Result<(), String>;
+    fn ser_push(&mut self, s: &Ser);
 }
 
 impl<T> ShlAssign<T> for Ser  where T: Serializer {
@@ -77,24 +77,26 @@ impl<T> ShlAssign<T> for Ser  where T: Serializer {
 
 mod tests {
     use super::Serializer;
+    use std::ops::Shl;
     use super::Ser;
 
     
     struct TestSer {
         v: u32,
+        ser: Ser,
     }
 
     impl TestSer {
         fn new(v: u32) -> Self {
-            TestSer { v }
+            TestSer { v, ser: Ser::new() }
         }
     }
 
     impl Serializer for TestSer {
         fn ser(&self) -> Ser {
             let mut s = Ser::new();
-            s.from_u32(self.v);
-            s
+            self.ser.from_u32(self.v);
+            self.ser()
         }
 
         fn deser(&mut self, data: &[u8]) -> Result<(), String> {
@@ -105,8 +107,18 @@ mod tests {
             Ok(())
         }
 
-        fn ser_push(&mut self, s: &Ser) -> Result<(), String> {
-            Ok(())
+        fn ser_push(&mut self, s: &Ser) {
+            self.ser.append(s);
+        }
+    }
+
+    impl Shl for TestSer {
+        type Output = Ser;
+        fn shl(self, s: TestSer) -> Ser
+        {
+            self.ser();
+            self.ser_push(&s.ser());
+            self.ser()   
         }
     }
 
@@ -118,6 +130,9 @@ mod tests {
         let mut c = Ser::new();
         c <<= a;
         c <<= b;
+        assert!(c.to_vec() == vec![42, 0, 0, 0, 69, 0, 0, 0]);
+        c = Ser::new();
+        c <<= a <<= b;
     
     }
 
