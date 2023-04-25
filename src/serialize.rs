@@ -122,17 +122,6 @@ mod tests {
         }
     }
 
-    impl Shl for TestSer {
-        type Output = Ser;
-        fn shl(self, s: TestSer) -> Ser
-        {
-            let mut result = Ser::new();
-            result.append(&self.ser());
-            result.append(&s.ser());
-            result
-        }
-    }
-
     #[test]
     fn test_serializer() {
         assert!(2 + 2 == 4);
@@ -143,7 +132,7 @@ mod tests {
         //c <<= a;
         //c <<= b;
         //assert!(c.to_vec() == vec![42, 0, 0, 0, 69, 0, 0, 0]);
-        d = a << b << c.ser();
+        d = a.ser() << b.ser() << c.ser();
         assert!(d.to_vec() == vec![42, 0, 0, 0, 69, 0, 0, 0, 7, 0, 0, 0]);
     }
 
