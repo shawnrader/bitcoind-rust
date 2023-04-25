@@ -1,4 +1,4 @@
-use std::ops::ShlAssign;
+use std::ops::{Shl, ShlAssign};
 use std::ops::Add;
 
 pub enum SER {
@@ -35,6 +35,7 @@ where
     }
 }
 
+#[derive(Debug, Clone)]
 struct Ser {
     v: Vec<u8>,
 }
@@ -55,8 +56,19 @@ impl Ser {
         self.v.clone()
     }
 
-    pub fn from_u32(&mut self, x: u32) {
-        self.v = x.to_le_bytes().to_vec();
+    pub fn from_u32(x: u32) -> Self {
+        Ser { v: x.to_le_bytes().to_vec() }
+    }
+}
+
+impl Shl for Ser {
+    type Output = Ser;
+    fn shl(self, s: Ser) -> Ser
+    {
+        let mut result = Ser::new();
+        result.append(&self);
+        result.append(&s);
+        result
     }
 }
 
@@ -94,9 +106,7 @@ mod tests {
 
     impl Serializer for TestSer {
         fn ser(&self) -> Ser {
-            let mut s = Ser::new();
-            self.ser.from_u32(self.v);
-            self.ser()
+            Ser::from_u32(self.v)
         }
 
         fn deser(&mut self, data: &[u8]) -> Result<(), String> {
@@ -116,9 +126,10 @@ mod tests {
         type Output = Ser;
         fn shl(self, s: TestSer) -> Ser
         {
-            self.ser();
-            self.ser_push(&s.ser());
-            self.ser()   
+            let mut result = Ser::new();
+            result.append(&self.ser());
+            result.append(&s.ser());
+            result
         }
     }
 
@@ -127,13 +138,13 @@ mod tests {
         assert!(2 + 2 == 4);
         let a = TestSer::new(42);
         let b = TestSer::new(69);
-        let mut c = Ser::new();
-        c <<= a;
-        c <<= b;
-        assert!(c.to_vec() == vec![42, 0, 0, 0, 69, 0, 0, 0]);
-        c = Ser::new();
-        c <<= a <<= b;
-    
+        let c = TestSer::new(7);
+        let mut d = Ser::new();
+        //c <<= a;
+        //c <<= b;
+        //assert!(c.to_vec() == vec![42, 0, 0, 0, 69, 0, 0, 0]);
+        d = a << b << c.ser();
+        assert!(d.to_vec() == vec![42, 0, 0, 0, 69, 0, 0, 0, 7, 0, 0, 0]);
     }
 
 }
