@@ -1,6 +1,6 @@
 pub mod standard;
 pub mod interpreter;
-use std::ops::ShlAssign;
+use std::ops::{Shl, ShlAssign};
 
 // Maximum number of bytes pushable to the stack
 const MAX_SCRIPT_ELEMENT_SIZE:i32 = 520;
@@ -186,6 +186,14 @@ pub enum opcodetype
 
 pub const OP_FALSE: opcodetype = opcodetype::OP_0;
 pub const OP_TRUE: opcodetype = opcodetype::OP_1;
+
+
+impl opcodetype {
+    pub fn cs(self) -> CScript {
+        let v = vec![self as u8];
+        CScript::new(v)
+    }
+}
 
 /**
  * Numeric opcodes (OP_1ADD, etc) are restricted to operating on 4-byte integers.
@@ -439,6 +447,47 @@ impl CScript
         self
     }
 
+    pub fn append(&mut self, s: &CScript)
+    {
+        println!("append: {:?} and {:?}", self.v, s.to_vec());
+        self.v.append(&mut s.to_vec());
+        println!("append result: {:?}", self.v);
+    }
+
+    pub fn to_vec(&self) -> Vec<u8> {
+        self.v.clone()
+    }
+
+    pub fn new(v: Vec<u8>) -> CScript {
+        CScript { v }
+    }
+
+    pub fn push_data(b: &[u8]) -> CScript {
+        let mut v = Vec::new();
+
+        if b.len() < OP_PUSHDATA1 as usize
+        {
+            v.push(b.len() as u8);
+        }
+        else if b.len() <= 0xff
+        {
+            v.push(OP_PUSHDATA1 as u8);
+            v.push(b.len() as u8);
+        }
+        else if b.len() <= 0xffff
+        {
+            v.push(OP_PUSHDATA2 as u8);
+            v.extend_from_slice(&u16::to_le_bytes(b.len() as u16));
+        }
+        else
+        {
+            v.push(OP_PUSHDATA4 as u8);
+            v.extend_from_slice(&u32::to_le_bytes(b.len() as u32));
+        }
+        v.extend_from_slice(b);
+        return CScript::new(v)
+    }
+
 // public:
 //    CScript() { }
 //    CScript(const_iterator pbegin, const_iterator pend) : CScriptBase(pbegin, pend) { }
@@ -455,7 +504,7 @@ impl CScript
     // e.g. via prevector
     //explicit CScript(const std::vector<unsigned char>& b) = delete;
 
-    pub fn new(b: i64)
+    pub fn from_i64(b: i64)
     {
        let mut s = Self{v:vec![]};
        s <<= b;
@@ -649,7 +698,15 @@ impl CScript
     }
 }
 
-
+impl Shl for CScript {
+    type Output = CScript;
+    fn shl(self, s: CScript) -> CScript
+    {
+        let mut result = CScript::new(self.to_vec());
+        result.append(&s);
+        result
+    }
+}
 
 //CScript& operator<<(int64_t b) LIFETIMEBOUND { return push_int64(b); }
 impl ShlAssign<i64> for CScript {
@@ -808,9 +865,8 @@ mod tests {
 
         let mut dummy = H160::zero();
         //s1 << OP_1 << ToByteVector(dummy) << ToByteVector(dummy) << OP_2 << OP_CHECKMULTISIG;
-        //s1 <<= OP_1 <<= dummy <<= dummy <<= OP_2 <<= OP_CHECKMULTISIG;
-        //dummy <<= OP_2 <<= OP_CHECKMULTISIG;
-        //assert_eq!(s1.GetSigOpCount(true), 2);
+        s1 = OP_1.cs() << CScript::push_data(dummy.as_bytes()) << CScript::push_data(dummy.as_bytes()) << OP_2.cs() << OP_CHECKMULTISIG.cs();
+        assert_eq!(s1.GetSigOpCount(true), 2);
         //s1 << OP_IF << OP_CHECKSIG << OP_ENDIF;
         //assert_eq!(s1.GetSigOpCount(true), 3);
         //assert_eq!(s1.GetSigOpCount(false), 21);
