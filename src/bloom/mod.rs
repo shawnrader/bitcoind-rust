@@ -125,9 +125,9 @@ impl CBloomFilter {
             // This means clients don't have to update the filter themselves when a new relevant tx
             // is discovered in order to find spending transactions, which avoids round-tripping and race conditions.
             //let mut pc = &mut tx.vout[i].scriptPubKey.v[0..];
-            let mut pc = &mut vout.borrow_mut().scriptPubKey.v[0..];
+            let mut pc = &vout.borrow_mut().scriptPubKey.v[0..];
             //std::vector<unsigned char> data;
-            let mut data:&mut [u8] = &mut [];
+            let mut data:&[u8] = &[];
             //while (pc < txout.scriptPubKey.end())
             while pc.len() > 0
             {
@@ -177,12 +177,12 @@ impl CBloomFilter {
 
             let scriptSig = RefCell::new(txin.scriptSig.clone());
             // Match if the filter contains any arbitrary script data element in any scriptSig in tx
-            let pc = &mut scriptSig.borrow_mut().v[0..];
-            let mut data: &mut [u8] = &mut [];
+            let mut pc = &scriptSig.borrow_mut().v[0..];
+            let mut data: &[u8] = &[];
             while pc.len() > 0
             {
                 let mut opcode: opcodetype = opcodetype::OP_INVALIDOPCODE;
-                if !CScript::GetOp(pc, &mut opcode, &mut data)
+                if !CScript::GetOp(&mut pc, &mut opcode, &mut data)
                 {
                     break;
                 }

@@ -108,17 +108,20 @@ fn MatchMultisig(script: &mut CScript, required_sigs: &mut i32, pubkeys: &mut Ve
         return false;
     }
 
-    let mut binding = v.borrow_mut();
-    let mut it = binding.as_mut_slice();
-    if !CScript::GetOp(&mut it, &mut opcode, &mut data[0..]) {
+    let binding = v.borrow_mut();
+    let mut it = binding.as_slice();
+    let mut out: &[u8] = &[];
+    if !CScript::GetOp(&mut it, &mut opcode, &mut out) {
         return false;
     }
+    data.copy_from_slice(out);
+
     let req_sigs = GetScriptNumber(&opcode, &data, 1, super::MAX_PUBKEYS_PER_MULTISIG);
     if req_sigs == None {
         return false;
     }
     *required_sigs = req_sigs.unwrap();
-    while CScript::GetOp(&mut it, &mut opcode, &mut data[0..]) && pubkey::ValidSize(&data)
+    while CScript::GetOp(&mut it, &mut opcode, &mut &data[0..]) && pubkey::ValidSize(&data)
     {
         pubkeys.push(data.clone());
     }
@@ -179,7 +182,7 @@ pub fn Solver(scriptPubKey: &mut CScript, vSolutionsRet: &mut Vec<Vec<u8>>) -> T
     // So long as script passes the IsUnspendable() test and all but the first
     // byte passes the IsPushOnly() test we don't care what exactly is in the
     // script.
-    if scriptPubKey.v.len() >= 1 && scriptPubKey.v[0] == opcodetype::OP_RETURN as u8 && CScript::IsPushOnly(&mut  scriptPubKey.v[0..1])
+    if scriptPubKey.v.len() >= 1 && scriptPubKey.v[0] == opcodetype::OP_RETURN as u8 && CScript::IsPushOnly(&mut  &scriptPubKey.v[0..1])
     {
         return TxoutType::NULL_DATA;
     }

@@ -327,7 +327,7 @@ impl CScriptNum {
 #[allow(unused_assignments)]
 //bool GetScriptOp(CScriptBase::const_iterator& pc, CScriptBase::const_iterator end, opcodetype& opcodeRet, std::vector<unsigned char>* pvchRet)
 /// Return opcode, slice to start of next op, slice to push data
-fn GetScriptOp<'a>(mut pc: &'a mut [u8], opcodeRet: &mut opcodetype, mut _pvchRet: &'a [u8]) -> bool
+fn GetScriptOp<'a>(pc: &mut &'a [u8], opcodeRet: &mut opcodetype, pvchRet: &mut &'a [u8]) -> bool
 {
     let mut nSize: u32 = 0;
    
@@ -344,7 +344,7 @@ fn GetScriptOp<'a>(mut pc: &'a mut [u8], opcodeRet: &mut opcodetype, mut _pvchRe
     //    return false;
     //unsigned int opcode = *pc++;
     let opcode: opcodetype = unsafe { std::mem::transmute(pc[0])};
-    let mut slice = &mut pc[1..];
+    *pc = &pc[1..];
 
     // Immediate operand
     if opcode <= OP_PUSHDATA4
@@ -355,39 +355,39 @@ fn GetScriptOp<'a>(mut pc: &'a mut [u8], opcodeRet: &mut opcodetype, mut _pvchRe
         }
         else if opcode == OP_PUSHDATA1
         {
-            if slice.len() < 1
+            if pc.len() < 1
             {
                 return false;
             }
             //nSize = *pc++;
-            nSize = slice[0] as u32;
-            slice = &mut slice[1..];
+            nSize = pc[0] as u32;
+            *pc = &pc[1..];
         }
         else if opcode == OP_PUSHDATA2
         {
-            if slice.len() < 2
+            if pc.len() < 2
             {
                 return false;
             }
             //nSize = ReadLE16(&pc[0]);
-            nSize = u32::from(u16::from_le_bytes(slice[0..2].try_into().unwrap()));
+            nSize = u32::from(u16::from_le_bytes(pc[0..2].try_into().unwrap()));
             //pc += 2;
-            slice = &mut slice[2..];
+            *pc = &pc[2..];
         }
         else if opcode == OP_PUSHDATA4
         {
-            if slice.len() < 4
+            if pc.len() < 4
             {
                 return false;
             }
             //nSize = ReadLE32(&pc[0]);
-            nSize = u32::from_le_bytes(slice[0..2].try_into().unwrap());
+            nSize = u32::from_le_bytes(pc[0..2].try_into().unwrap());
             //pc += 4;
-            slice = &mut slice[2..];
+            *pc = &pc[2..];
         }
         //if (end - pc < 0 || (unsigned int)(end - pc) < nSize)
         //    return false;
-        if slice.len() < nSize as usize
+        if pc.len() < nSize as usize
         {
             return false;
         }
@@ -395,13 +395,10 @@ fn GetScriptOp<'a>(mut pc: &'a mut [u8], opcodeRet: &mut opcodetype, mut _pvchRe
         //if (pvchRet)
         //    pvchRet->assign(pc, pc + nSize);
         //pc += nSize;
+        *pvchRet = &pc[0..nSize as usize];
+        *pc = &pc[nSize as usize..];
     }
 
-    //opcodeRet = static_cast<opcodetype>(opcode);
-    //pvchRet.copy_from_slice(slice[0..nSize as usize]);
-    //pc = &mut slice[nSize as usize..];
-    //_pvchRet = &slice[0..nSize as usize];
-    (_pvchRet, pc) = slice.split_at_mut(nSize as usize);
     *opcodeRet = opcode;
     return true;
 
@@ -519,7 +516,7 @@ impl CScript
         return GetScriptOp(pc, end(), opcodeRet, &vchRet);
     }*/
     #[allow(unused_mut)]
-    pub fn GetOp(mut pc: &mut [u8], opcodeRet: &mut opcodetype, pvchRet: &mut [u8]) -> bool
+    pub fn GetOp<'a>(pc: &mut &'a [u8], opcodeRet: &mut opcodetype, pvchRet: &mut &'a [u8]) -> bool
     {
         GetScriptOp(pc, opcodeRet, pvchRet)
     }
@@ -566,14 +563,14 @@ impl CScript
     {
         let mut n: i32 = 0;
         //const_iterator pc = begin();
-        let mut pc = &mut self.v[0..];
+        let mut pc = &mut &self.v[0..];
         //opcodetype lastOpcode = OP_INVALIDOPCODE;
         let mut lastOpcode: opcodetype = OP_INVALIDOPCODE;
         while pc.len() > 0
         {
-            let mut pvchRet: &mut [u8] = &mut [0];
+            let mut pvchRet: &[u8] = &[];
             let mut opcode: opcodetype = opcodetype::OP_INVALIDOPCODE;
-            if CScript::GetOp(pc, &mut opcode, pvchRet) == false
+            if CScript::GetOp(pc, &mut opcode, &mut pvchRet) == false
             {
                 break;
             }
@@ -652,13 +649,14 @@ impl CScript
     /** Called by IsStandardTx and P2SH/BIP62 VerifyScript (which makes it consensus-critical). */
     //bool IsPushOnly() const;
     //bool CScript::IsPushOnly(const_iterator pc) const
-    pub fn IsPushOnly(pc: &mut [u8]) -> bool
+    pub fn IsPushOnly(pc: &[u8]) -> bool
     {
         while pc.len() > 0
         {
             let mut opcode = opcodetype::OP_INVALIDOPCODE;
-            let mut pvchRet:&mut [u8] = &mut [0];
-            if CScript::GetOp(pc, &mut opcode, &mut pvchRet)
+            let mut pvchRet: &[u8] = &[];
+            let mut pc = pc;
+            if CScript::GetOp(&mut pc, &mut opcode, &mut pvchRet)
             {
                 // Note that IsPushOnly() *does* consider OP_RESERVED to be a
                 // push-type opcode, however execution of OP_RESERVED fails, so
