@@ -825,6 +825,12 @@ impl Shl for CScript {
     }
 }
 
+impl ShlAssign<CScript> for CScript {
+    fn shl_assign(&mut self, s: CScript) {
+        self.append(&s);
+    }
+}
+
 //CScript& operator<<(int64_t b) LIFETIMEBOUND { return push_int64(b); }
 impl ShlAssign<i64> for CScript {
 
@@ -984,8 +990,9 @@ mod tests {
         //s1 << OP_1 << ToByteVector(dummy) << ToByteVector(dummy) << OP_2 << OP_CHECKMULTISIG;
         s1 = OP_1.cs() << CScript::push_data(dummy.as_bytes()) << CScript::push_data(dummy.as_bytes()) << OP_2.cs() << OP_CHECKMULTISIG.cs();
         assert_eq!(s1.GetSigOpCount(true), 2);
-        //s1 << OP_IF << OP_CHECKSIG << OP_ENDIF;
-        //assert_eq!(s1.GetSigOpCount(true), 3);
-        //assert_eq!(s1.GetSigOpCount(false), 21);
+        s1 <<= OP_IF.cs() << OP_CHECKSIG.cs() << OP_ENDIF.cs();
+        let opcount = s1.GetSigOpCount(true);
+        assert_eq!(opcount, 3);
+        assert_eq!(s1.GetSigOpCount(false), 21);
     }
 }
