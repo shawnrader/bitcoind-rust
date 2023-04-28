@@ -307,6 +307,7 @@ impl opcodetype {
             0xb7 => Some(opcodetype::OP_NOP8),
             0xb8 => Some(opcodetype::OP_NOP9),
             0xb9 => Some(opcodetype::OP_NOP10),
+            0xfa => Some(opcodetype::OP_CHECKSIGADD),
             0xff => Some(opcodetype::OP_INVALIDOPCODE),
             _ => None,
         }
@@ -665,7 +666,7 @@ impl CScript
             return OP_0;
         }
 
-        unsafe { std::mem::transmute(OP_1 as u8 + (n as u8 - 1))}
+        opcodetype::from_u8(OP_1 as u8 + (n as u8 - 1)).unwrap()
     }
 
     /**
@@ -755,7 +756,7 @@ impl CScript
         }
         if (self.v[1] as usize + 2) == self.v.len()
         {
-            let opcode: opcodetype = unsafe { std::mem::transmute(self.v[0])};
+            let opcode = opcodetype::from_u8(self.v[0]).unwrap();
             *version = CScript::DecodeOP_N(opcode);
             //program = std::vector<unsigned char>(this->begin() + 2, this->end());
             program.clone_from_slice(&self.v[2.. ]);
