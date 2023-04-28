@@ -193,6 +193,124 @@ impl opcodetype {
         let v = vec![self as u8];
         CScript::new(v)
     }
+
+    pub fn from_u8(n: u8) -> Option<opcodetype> {
+        match n {
+            0x00 => Some(opcodetype::OP_0),
+            0x4c => Some(opcodetype::OP_PUSHDATA1),
+            0x4d => Some(opcodetype::OP_PUSHDATA2),
+            0x4e => Some(opcodetype::OP_PUSHDATA4),
+            0x4f => Some(opcodetype::OP_1NEGATE),
+            0x50 => Some(opcodetype::OP_RESERVED),
+            0x51 => Some(opcodetype::OP_1),
+            0x52 => Some(opcodetype::OP_2),
+            0x53 => Some(opcodetype::OP_3),
+            0x54 => Some(opcodetype::OP_4),
+            0x55 => Some(opcodetype::OP_5),
+            0x56 => Some(opcodetype::OP_6),
+            0x57 => Some(opcodetype::OP_7),
+            0x58 => Some(opcodetype::OP_8),
+            0x59 => Some(opcodetype::OP_9),
+            0x5a => Some(opcodetype::OP_10),
+            0x5b => Some(opcodetype::OP_11),
+            0x5c => Some(opcodetype::OP_12),
+            0x5d => Some(opcodetype::OP_13),
+            0x5e => Some(opcodetype::OP_14),
+            0x5f => Some(opcodetype::OP_15),
+            0x60 => Some(opcodetype::OP_16),
+            0x61 => Some(opcodetype::OP_NOP),
+            0x62 => Some(opcodetype::OP_VER),
+            0x63 => Some(opcodetype::OP_IF),
+            0x64 => Some(opcodetype::OP_NOTIF),
+            0x65 => Some(opcodetype::OP_VERIF),
+            0x66 => Some(opcodetype::OP_VERNOTIF),
+            0x67 => Some(opcodetype::OP_ELSE),
+            0x68 => Some(opcodetype::OP_ENDIF),
+            0x69 => Some(opcodetype::OP_VERIFY),
+            0x6a => Some(opcodetype::OP_RETURN),
+            0x6b => Some(opcodetype::OP_TOALTSTACK),
+            0x6c => Some(opcodetype::OP_FROMALTSTACK),
+            0x6d => Some(opcodetype::OP_2DROP),
+            0x6e => Some(opcodetype::OP_2DUP),
+            0x6f => Some(opcodetype::OP_3DUP),
+            0x70 => Some(opcodetype::OP_2OVER),
+            0x71 => Some(opcodetype::OP_2ROT),
+            0x72 => Some(opcodetype::OP_2SWAP),
+            0x73 => Some(opcodetype::OP_IFDUP),
+            0x74 => Some(opcodetype::OP_DEPTH),
+            0x75 => Some(opcodetype::OP_DROP),
+            0x76 => Some(opcodetype::OP_DUP),
+            0x77 => Some(opcodetype::OP_NIP),
+            0x78 => Some(opcodetype::OP_OVER),
+            0x79 => Some(opcodetype::OP_PICK),
+            0x7a => Some(opcodetype::OP_ROLL),
+            0x7b => Some(opcodetype::OP_ROT),
+            0x7c => Some(opcodetype::OP_SWAP),
+            0x7d => Some(opcodetype::OP_TUCK),
+            0x7e => Some(opcodetype::OP_CAT),
+            0x7f => Some(opcodetype::OP_SUBSTR),
+            0x80 => Some(opcodetype::OP_LEFT),
+            0x81 => Some(opcodetype::OP_RIGHT),
+            0x82 => Some(opcodetype::OP_SIZE),
+            0x83 => Some(opcodetype::OP_INVERT),
+            0x84 => Some(opcodetype::OP_AND),
+            0x85 => Some(opcodetype::OP_OR),
+            0x86 => Some(opcodetype::OP_XOR),
+            0x87 => Some(opcodetype::OP_EQUAL),
+            0x88 => Some(opcodetype::OP_EQUALVERIFY),
+            0x89 => Some(opcodetype::OP_RESERVED1),
+            0x8a => Some(opcodetype::OP_RESERVED2),
+            0x8b => Some(opcodetype::OP_1ADD),
+            0x8c => Some(opcodetype::OP_1SUB),
+            0x8d => Some(opcodetype::OP_2MUL),
+            0x8e => Some(opcodetype::OP_2DIV),
+            0x8f => Some(opcodetype::OP_NEGATE),
+            0x90 => Some(opcodetype::OP_ABS),
+            0x91 => Some(opcodetype::OP_NOT),
+            0x92 => Some(opcodetype::OP_0NOTEQUAL),
+            0x93 => Some(opcodetype::OP_ADD),
+            0x94 => Some(opcodetype::OP_SUB),
+            0x95 => Some(opcodetype::OP_MUL),
+            0x96 => Some(opcodetype::OP_DIV),
+            0x97 => Some(opcodetype::OP_MOD),
+            0x98 => Some(opcodetype::OP_LSHIFT),
+            0x99 => Some(opcodetype::OP_RSHIFT),
+            0x9a => Some(opcodetype::OP_BOOLAND),
+            0x9b => Some(opcodetype::OP_BOOLOR),
+            0x9c => Some(opcodetype::OP_NUMEQUAL),
+            0x9d => Some(opcodetype::OP_NUMEQUALVERIFY),
+            0x9e => Some(opcodetype::OP_NUMNOTEQUAL),
+            0x9f => Some(opcodetype::OP_LESSTHAN),
+            0xa0 => Some(opcodetype::OP_GREATERTHAN),
+            0xa1 => Some(opcodetype::OP_LESSTHANOREQUAL),
+            0xa2 => Some(opcodetype::OP_GREATERTHANOREQUAL),
+            0xa3 => Some(opcodetype::OP_MIN),
+            0xa4 => Some(opcodetype::OP_MAX),
+            0xa5 => Some(opcodetype::OP_WITHIN),
+            0xa6 => Some(opcodetype::OP_RIPEMD160),
+            0xa7 => Some(opcodetype::OP_SHA1),
+            0xa8 => Some(opcodetype::OP_SHA256),
+            0xa9 => Some(opcodetype::OP_HASH160),
+            0xaa => Some(opcodetype::OP_HASH256),
+            0xab => Some(opcodetype::OP_CODESEPARATOR),
+            0xac => Some(opcodetype::OP_CHECKSIG),
+            0xad => Some(opcodetype::OP_CHECKSIGVERIFY),
+            0xae => Some(opcodetype::OP_CHECKMULTISIG),
+            0xaf => Some(opcodetype::OP_CHECKMULTISIGVERIFY),
+            0xb0 => Some(opcodetype::OP_NOP1),
+            0xb1 => Some(opcodetype::OP_CHECKLOCKTIMEVERIFY),
+            0xb2 => Some(opcodetype::OP_CHECKSEQUENCEVERIFY),
+            0xb3 => Some(opcodetype::OP_NOP4),
+            0xb4 => Some(opcodetype::OP_NOP5),
+            0xb5 => Some(opcodetype::OP_NOP6),
+            0xb6 => Some(opcodetype::OP_NOP7),
+            0xb7 => Some(opcodetype::OP_NOP8),
+            0xb8 => Some(opcodetype::OP_NOP9),
+            0xb9 => Some(opcodetype::OP_NOP10),
+            0xff => Some(opcodetype::OP_INVALIDOPCODE),
+            _ => None,
+        }
+    }
 }
 
 /**
@@ -343,17 +461,18 @@ fn GetScriptOp<'a>(pc: &mut &'a [u8], opcodeRet: &mut opcodetype, pvchRet: &mut 
     //if (end - pc < 1)
     //    return false;
     //unsigned int opcode = *pc++;
-    let opcode: opcodetype = unsafe { std::mem::transmute(pc[0])};
+    let opcode_raw = pc[0];
+    let opcode_reg = opcodetype::from_u8(pc[0]);
     *pc = &pc[1..];
 
     // Immediate operand
-    if opcode <= OP_PUSHDATA4
+    if opcode_raw <= OP_PUSHDATA4 as u8
     {
-        if opcode < OP_PUSHDATA1
+        if opcode_raw < OP_PUSHDATA1 as u8
         {
-            nSize = opcode.clone() as u32;
+            nSize = opcode_raw.clone() as u32;
         }
-        else if opcode == OP_PUSHDATA1
+        else if opcode_raw == OP_PUSHDATA1 as u8
         {
             if pc.len() < 1
             {
@@ -363,7 +482,7 @@ fn GetScriptOp<'a>(pc: &mut &'a [u8], opcodeRet: &mut opcodetype, pvchRet: &mut 
             nSize = pc[0] as u32;
             *pc = &pc[1..];
         }
-        else if opcode == OP_PUSHDATA2
+        else if opcode_raw == OP_PUSHDATA2 as u8
         {
             if pc.len() < 2
             {
@@ -374,7 +493,7 @@ fn GetScriptOp<'a>(pc: &mut &'a [u8], opcodeRet: &mut opcodetype, pvchRet: &mut 
             //pc += 2;
             *pc = &pc[2..];
         }
-        else if opcode == OP_PUSHDATA4
+        else if opcode_raw == OP_PUSHDATA4 as u8
         {
             if pc.len() < 4
             {
@@ -398,8 +517,9 @@ fn GetScriptOp<'a>(pc: &mut &'a [u8], opcodeRet: &mut opcodetype, pvchRet: &mut 
         *pvchRet = &pc[0..nSize as usize];
         *pc = &pc[nSize as usize..];
     }
-
-    *opcodeRet = opcode;
+    if opcode_reg.is_some() {
+        *opcodeRet = opcode_reg.unwrap();
+    }
     return true;
 
 }
@@ -424,8 +544,6 @@ use opcodetype::*;
 
 impl CScript
 {
-
-
     // CScript& push_int64(int64_t n)
     fn push_int64(&mut self, n: i64) -> &mut CScript
     {
