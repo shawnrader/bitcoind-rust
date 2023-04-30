@@ -48,7 +48,7 @@ impl CSHA256 {
         {
             // Fill the buffer with what remains.
             //memcpy(buf + bufsize, data, end - data);
-            self.buf[bufsize..].copy_from_slice(data);
+            self.buf[bufsize..data.len()].copy_from_slice(data);
             //bytes += end - data;
             self.bytes += data.len() as u64;
         }

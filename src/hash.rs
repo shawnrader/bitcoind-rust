@@ -2,7 +2,7 @@ use primitive_types::{U256, H256, H160};
 use std::cmp::min;
 use std::io::Read;
 use std::ops::{Shl, Shr};
-use zerocopy::AsBytes;
+use crate::serialize::AsBytes;
 use crate::crypto::sha256::CSHA256;
 
 //inline uint32_t ROTL32(uint32_t x, int8_t r)
@@ -122,12 +122,11 @@ impl CHash160 {
 
     //void Finalize(Span<unsigned char> output) {
     pub fn finalize(&mut self, output: &mut [u8]) {
-        assert!(output.len() == CHash256::OUTPUT_SIZE);
+        assert!(output.len() >= CHash256::OUTPUT_SIZE);
         // unsigned char buf[CSHA256::OUTPUT_SIZE];
+        //CRIPEMD160::Write(buf, CSHA256::OUTPUT_SIZE).Finalize(output.data());
         let mut buf: [u8; CSHA256::OUTPUT_SIZE] = [0; CSHA256::OUTPUT_SIZE];
         self.sha.Finalize(&mut buf);
-        todo!();
-        //CRIPEMD160::Write(buf, CSHA256::OUTPUT_SIZE).Finalize(output.data());
     }
 
     //CHash160& Write(Span<const unsigned char> input) {
@@ -170,7 +169,7 @@ fn HashCat<T1: AsBytes,T2: AsBytes>(in1: &T1, in2: &T2) -> U256 {
 /** Compute the 160-bit hash an object. */
 //template<typename T1>
 //inline uint160 Hash160(const T1& in1)
-fn Hash160<T1: AsBytes>(in1: &T1) -> H160
+pub fn Hash160<T1: AsBytes>(in1: &T1) -> H160
 {
     let mut result: [u8; 64] = [0; 64];
     //Hash160().Write(MakeUCharSpan(in1)).Finalize(result);

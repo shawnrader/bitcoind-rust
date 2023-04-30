@@ -1,4 +1,5 @@
 use primitive_types::U256;
+use crate::script::CScript;
 
 //const unsigned int BIP32_EXTKEY_SIZE = 74;
 pub const BIP32_EXTKEY_SIZE: u32 = 74;
@@ -53,4 +54,16 @@ pub fn ValidSize(vch: &Vec<u8>) -> bool
 /** An encapsulated public key. */
 pub struct CPubKey {
     vch: [u8; SIZE],
+}
+
+pub struct XOnlyPubKey {
+    m_keydata: U256,
+}
+
+impl XOnlyPubKey {
+    pub fn cs(&self) -> CScript {
+        let mut buf = [0u8; 32];
+        self.m_keydata.to_little_endian(&mut buf);
+        CScript::new(buf.to_vec())
+    }
 }

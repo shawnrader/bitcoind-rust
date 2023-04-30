@@ -8,6 +8,10 @@ pub enum SER {
     GETHASH         = (1 << 2),
 }
 
+pub trait AsBytes {
+    fn as_bytes(&self) -> &[u8];
+}
+
 #[derive(Debug)]
 struct Wrapper<T> {
     value: T,

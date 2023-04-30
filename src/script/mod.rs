@@ -1,5 +1,6 @@
 pub mod standard;
 pub mod interpreter;
+use crate::serialize::AsBytes;
 use std::ops::{Shl, ShlAssign};
 
 // Maximum number of bytes pushable to the stack
@@ -535,13 +536,14 @@ fn GetScriptOp<'a>(pc: &mut &'a [u8], opcodeRet: &mut opcodetype, pvchRet: &mut 
 
 /// Serialized script, used inside transaction inputs and outputs
 //class CScript : public CScriptBase
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct CScript {
 
     pub v: Vec<u8>,
 }
 
 use opcodetype::*;
+
 
 impl CScript
 {
@@ -815,6 +817,12 @@ impl CScript
     }
 }
 
+impl AsBytes for CScript {
+    fn as_bytes(&self) -> &[u8] {
+        self.v.as_slice()
+    }
+}
+
 impl Shl for CScript {
     type Output = CScript;
     fn shl(self, s: CScript) -> CScript
@@ -978,7 +986,9 @@ pub fn CheckMinimalPush(data: &[u8], opcode: opcodetype) -> bool
 mod tests {
     use super::CScript;
     use primitive_types::H160;
+    use crate::hash::Hash160;
     use super::opcodetype::*;
+    use crate::script::standard::{GetScriptForDestination, CTxDestination};
     
     #[test]
     fn test_GetSigOpCount() {
@@ -994,5 +1004,15 @@ mod tests {
         let opcount = s1.GetSigOpCount(true);
         assert_eq!(opcount, 3);
         assert_eq!(s1.GetSigOpCount(false), 21);
+
+        //CScript p2sh = GetScriptForDestination(ScriptHash(s1));
+        let hash = Hash160(&s1);
+        let mut p2sh = GetScriptForDestination(&CTxDestination::ScriptHash(hash));
+        //CScript scriptSig;
+        let mut scriptSig: CScript = CScript{v: vec![]};
+        //scriptSig << OP_0 << Serialize(s1);
+        scriptSig = OP_0.cs() << s1;
+        //BOOST_CHECK_EQUAL(p2sh.GetSigOpCount(scriptSig), 3U);
+        assert_eq!(p2sh.GetSigOpCount(true), 3);
     }
 }

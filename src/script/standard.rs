@@ -5,8 +5,9 @@
 
 use crate::script::{CScript, CScriptNum, OP_FALSE};
 use crate::script::interpreter::*;
-use crate::script::opcodetype;
-use crate::pubkey;
+use crate::script::opcodetype::{self, *};
+use crate::pubkey::{self, XOnlyPubKey};
+use primitive_types::{H160, H256};
 use std::cell::RefCell;
 
 #[derive(PartialEq)]
@@ -25,6 +26,109 @@ pub enum TxoutType {
     /// Only for Witness versions not already defined above
     WITNESS_UNKNOWN,
 }
+
+
+/**
+ * A txout script template with a specific destination. It is either:
+ *  * CNoDestination: no destination set
+ *  * PKHash: TxoutType::PUBKEYHASH destination (P2PKH)
+ *  * ScriptHash: TxoutType::SCRIPTHASH destination (P2SH)
+ *  * WitnessV0ScriptHash: TxoutType::WITNESS_V0_SCRIPTHASH destination (P2WSH)
+ *  * WitnessV0KeyHash: TxoutType::WITNESS_V0_KEYHASH destination (P2WPKH)
+ *  * WitnessV1Taproot: TxoutType::WITNESS_V1_TAPROOT destination (P2TR)
+ *  * WitnessUnknown: TxoutType::WITNESS_UNKNOWN destination (P2W???)
+ *  A CTxDestination is the internal data type encoded in a bitcoin address
+ */
+//using CTxDestination = std::variant<CNoDestination, PKHash, ScriptHash, WitnessV0ScriptHash, WitnessV0KeyHash, WitnessV1Taproot, WitnessUnknown>;
+pub enum CTxDestination {
+    CNoDestination,
+    PKHash(H160),
+    ScriptHash(H160),
+    WitnessV0ScriptHash(H256),
+    WitnessV0KeyHash(H160),
+    WitnessV1Taproot(XOnlyPubKey),
+    WitnessUnknown,
+}
+
+/*
+struct ScriptHash : public BaseHash<uint160>
+{
+    ScriptHash() : BaseHash() {}
+    // These don't do what you'd expect.
+    // Use ScriptHash(GetScriptForDestination(...)) instead.
+    explicit ScriptHash(const WitnessV0KeyHash& hash) = delete;
+    explicit ScriptHash(const PKHash& hash) = delete;
+
+    explicit ScriptHash(const uint160& hash) : BaseHash(hash) {}
+    explicit ScriptHash(const CScript& script);
+    explicit ScriptHash(const CScriptID& script);
+};
+
+ScriptHash::ScriptHash(const CScript& in) : BaseHash(Hash160(in)) {}
+ScriptHash::ScriptHash(const CScriptID& in) : BaseHash(static_cast<uint160>(in)) {}
+
+*/
+
+/*
+namespace {
+    class CScriptVisitor
+    {
+    public:
+        CScript operator()(const CNoDestination& dest) const
+        {
+            return CScript();
+        }
+    
+        CScript operator()(const PKHash& keyID) const
+        {
+            return CScript() << OP_DUP << OP_HASH160 << ToByteVector(keyID) << OP_EQUALVERIFY << OP_CHECKSIG;
+        }
+    
+        CScript operator()(const ScriptHash& scriptID) const
+        {
+            return CScript() << OP_HASH160 << ToByteVector(scriptID) << OP_EQUAL;
+        }
+    
+        CScript operator()(const WitnessV0KeyHash& id) const
+        {
+            return CScript() << OP_0 << ToByteVector(id);
+        }
+    
+        CScript operator()(const WitnessV0ScriptHash& id) const
+        {
+            return CScript() << OP_0 << ToByteVector(id);
+        }
+    
+        CScript operator()(const WitnessV1Taproot& tap) const
+        {
+            return CScript() << OP_1 << ToByteVector(tap);
+        }
+    
+        CScript operator()(const WitnessUnknown& id) const
+        {
+            return CScript() << CScript::EncodeOP_N(id.version) << std::vector<unsigned char>(id.program, id.program + id.length);
+        }
+    };
+    } // namespace
+    
+    CScript GetScriptForDestination(const CTxDestination& dest)
+    {
+        return std::visit(CScriptVisitor(), dest);
+    }
+*/
+pub fn GetScriptForDestination(dest: &CTxDestination) -> CScript {
+    let mut script = CScript::new(Vec::new());
+    match dest {
+        CTxDestination::CNoDestination => script,
+        CTxDestination::PKHash(keyID) => OP_DUP.cs() << OP_HASH160.cs() << CScript::push_data(keyID.as_bytes()) << OP_EQUALVERIFY.cs() << OP_CHECKSIG.cs(),
+        CTxDestination::ScriptHash(scriptID) => OP_HASH160.cs() << CScript::push_data(scriptID.as_bytes()) << OP_EQUAL.cs(),
+        CTxDestination::WitnessV0KeyHash(id) => OP_0.cs() << CScript::push_data(id.as_bytes()),
+        CTxDestination::WitnessV0ScriptHash(id) => OP_0.cs() << CScript::push_data(id.as_bytes()),
+        CTxDestination::WitnessV1Taproot(tap) => OP_1.cs() << tap.cs(),
+        CTxDestination::WitnessUnknown => script,
+    }
+}
+
 
 fn IsPushdataOp(opcode: opcodetype) -> bool
 {
