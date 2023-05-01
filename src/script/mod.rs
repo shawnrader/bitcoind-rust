@@ -679,12 +679,11 @@ impl CScript
      *  ... OP_N CHECKMULTISIG ...
      */
     //unsigned int CScript::GetSigOpCount(bool fAccurate) const
-    #[allow(unused_mut)]
-    pub fn GetSigOpCount(&mut self, fAccurate: bool) -> i32
+    pub fn GetSigOpCount(&self, fAccurate: bool) -> i32
     {
         let mut n: i32 = 0;
         //const_iterator pc = begin();
-        let mut pc = &mut &self.v[0..];
+        let pc = &mut &self.v[0..];
         //opcodetype lastOpcode = OP_INVALIDOPCODE;
         let mut lastOpcode: opcodetype = OP_INVALIDOPCODE;
         while pc.len() > 0
@@ -716,32 +715,51 @@ impl CScript
     }
     
 
-/* 
-unsigned int CScript::GetSigOpCount(const CScript& scriptSig) const
-{
-    if (!IsPayToScriptHash())
-        return GetSigOpCount(true);
-
-    // This is a pay-to-script-hash scriptPubKey;
-    // get the last item that the scriptSig
-    // pushes onto the stack:
-    const_iterator pc = scriptSig.begin();
-    std::vector<unsigned char> vData;
-    while (pc < scriptSig.end())
+    /* 
+    unsigned int CScript::GetSigOpCount(const CScript& scriptSig) const
     {
-        opcodetype opcode;
-        if (!scriptSig.GetOp(pc, opcode, vData))
-            return 0;
-        if (opcode > OP_16)
-            return 0;
+        if (!IsPayToScriptHash())
+            return GetSigOpCount(true);
+
+        // This is a pay-to-script-hash scriptPubKey;
+        // get the last item that the scriptSig
+        // pushes onto the stack:
+        const_iterator pc = scriptSig.begin();
+        std::vector<unsigned char> vData;
+        while (pc < scriptSig.end())
+        {
+            opcodetype opcode;
+            if (!scriptSig.GetOp(pc, opcode, vData))
+                return 0;
+            if (opcode > OP_16)
+                return 0;
+        }
+
+        /// ... and return its opcount:
+        CScript subscript(vData.begin(), vData.end());
+        return subscript.GetSigOpCount(true);
     }
+    */
+    pub fn GetScriptSigOpCount(&mut self, scriptSig: &CScript) -> i32 {
+        if !self.IsPayToScriptHash() {
+            return self.GetSigOpCount(true);
+        }
 
-    /// ... and return its opcount:
-    CScript subscript(vData.begin(), vData.end());
-    return subscript.GetSigOpCount(true);
-}
- */
+        let mut pc = &mut &scriptSig.v[0..];
+        let mut vData: &[u8] = &[];
+        while pc.len() > 0 {
+            let mut opcode: opcodetype = opcodetype::OP_INVALIDOPCODE;
+            if CScript::GetOp(pc, &mut opcode, &mut vData) == false {
+                return 0;
+            }
+            if opcode > OP_16 {
+                return 0;
+            }
+        }
 
+        let subscript = CScript::new(vData.to_vec());
+        return subscript.GetSigOpCount(true);
+    }
 
 
     /**
