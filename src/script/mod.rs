@@ -716,6 +716,34 @@ impl CScript
     }
     
 
+/* 
+unsigned int CScript::GetSigOpCount(const CScript& scriptSig) const
+{
+    if (!IsPayToScriptHash())
+        return GetSigOpCount(true);
+
+    // This is a pay-to-script-hash scriptPubKey;
+    // get the last item that the scriptSig
+    // pushes onto the stack:
+    const_iterator pc = scriptSig.begin();
+    std::vector<unsigned char> vData;
+    while (pc < scriptSig.end())
+    {
+        opcodetype opcode;
+        if (!scriptSig.GetOp(pc, opcode, vData))
+            return 0;
+        if (opcode > OP_16)
+            return 0;
+    }
+
+    /// ... and return its opcount:
+    CScript subscript(vData.begin(), vData.end());
+    return subscript.GetSigOpCount(true);
+}
+ */
+
+
+
     /**
      * Accurately count sigOps, including sigOps in
      * pay-to-script-hash transactions:
@@ -1013,6 +1041,6 @@ mod tests {
         //scriptSig << OP_0 << Serialize(s1);
         scriptSig = OP_0.cs() << s1;
         //BOOST_CHECK_EQUAL(p2sh.GetSigOpCount(scriptSig), 3U);
-        assert_eq!(p2sh.GetSigOpCount(true), 3);
+        assert_eq!(p2sh.GetScriptSigOpCount(scriptSig), 3);
     }
 }

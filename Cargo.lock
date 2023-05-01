@@ -21,6 +21,7 @@ dependencies = [
  "byteorder",
  "generic-array",
  "primitive-types",
+ "wrapping_arithmetic",
  "zerocopy",
 ]
 
@@ -362,6 +363,16 @@ name = "wasi"
 version = "0.11.0+wasi-snapshot-preview1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c8d87e72b64a3b4db28d11ce29237c246188f4f51057d65a7eab63b7987e423"
+
+[[package]]
+name = "wrapping_arithmetic"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3c40f91817465a73689936b28aff1fafe1520270cadf61af671bde782618a3fc"
+dependencies = [
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "wyz"

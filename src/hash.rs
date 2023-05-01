@@ -122,11 +122,11 @@ impl CHash160 {
 
     //void Finalize(Span<unsigned char> output) {
     pub fn finalize(&mut self, output: &mut [u8]) {
-        assert!(output.len() >= CHash256::OUTPUT_SIZE);
         // unsigned char buf[CSHA256::OUTPUT_SIZE];
         //CRIPEMD160::Write(buf, CSHA256::OUTPUT_SIZE).Finalize(output.data());
         let mut buf: [u8; CSHA256::OUTPUT_SIZE] = [0; CSHA256::OUTPUT_SIZE];
         self.sha.Finalize(&mut buf);
+        output.copy_from_slice(&buf[0..CHash160::OUTPUT_SIZE])
     }
 
     //CHash160& Write(Span<const unsigned char> input) {
@@ -148,7 +148,7 @@ impl CHash160 {
 fn Hash<T: AsBytes>(in1:&T) -> U256
 {
     let mut h256 = CHash256::new();
-    let mut result: [u8; 64] = [0; 64];
+    let mut result: [u8; CSHA256::OUTPUT_SIZE] = [0; CSHA256::OUTPUT_SIZE];
     h256.write(&in1.as_bytes()).finalize(&mut result);
     U256::from_little_endian(&result)
 }
@@ -171,7 +171,7 @@ fn HashCat<T1: AsBytes,T2: AsBytes>(in1: &T1, in2: &T2) -> U256 {
 //inline uint160 Hash160(const T1& in1)
 pub fn Hash160<T1: AsBytes>(in1: &T1) -> H160
 {
-    let mut result: [u8; 64] = [0; 64];
+    let mut result: [u8; CHash160::OUTPUT_SIZE] = [0; CHash160::OUTPUT_SIZE];
     //Hash160().Write(MakeUCharSpan(in1)).Finalize(result);
     let mut h160 = CHash160::new();
     h160.write(&in1.as_bytes()).finalize(&mut result);
