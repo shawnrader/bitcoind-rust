@@ -745,6 +745,9 @@ impl CScript
             return self.GetSigOpCount(true);
         }
 
+        // This is a pay-to-script-hash scriptPubKey;
+        // get the last item that the scriptSig
+        // pushes onto the stack:
         let mut pc = &mut &scriptSig.v[0..];
         let mut vData: &[u8] = &[];
         while pc.len() > 0 {
@@ -757,6 +760,7 @@ impl CScript
             }
         }
 
+        /// ... and return its opcount:
         let subscript = CScript::new(vData.to_vec());
         return subscript.GetSigOpCount(true);
     }
@@ -1059,6 +1063,6 @@ mod tests {
         //scriptSig << OP_0 << Serialize(s1);
         scriptSig = OP_0.cs() << s1;
         //BOOST_CHECK_EQUAL(p2sh.GetSigOpCount(scriptSig), 3U);
-        assert_eq!(p2sh.GetScriptSigOpCount(scriptSig), 3);
+        assert_eq!(p2sh.GetScriptSigOpCount(&scriptSig), 3);
     }
 }
