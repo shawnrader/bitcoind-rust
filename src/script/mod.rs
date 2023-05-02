@@ -1038,6 +1038,7 @@ mod tests {
     use crate::{hash::Hash160, serialize::AsBytes};
     use super::opcodetype::*;
     use crate::script::standard::{GetScriptForDestination, CTxDestination};
+    use crate::pubkey::CPubKey;
     
     #[test]
     fn test_GetSigOpCount() {
@@ -1063,5 +1064,12 @@ mod tests {
         scriptSig = OP_0.cs() << CScript::push_data(s1.as_bytes());
         //BOOST_CHECK_EQUAL(p2sh.GetSigOpCount(scriptSig), 3U);
         assert_eq!(p2sh.GetScriptSigOpCount(&scriptSig), 3);
+
+        let keys: Vec<CPubKey> = vec![];
+        for i in 0..3 {
+            let k: CKey;
+            k.MakeNewKey(true);
+            keys.push_back(k.GetPubKey());
+        }
     }
 }
