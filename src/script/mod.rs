@@ -1035,7 +1035,7 @@ pub fn CheckMinimalPush(data: &[u8], opcode: u8) -> bool
 mod tests {
     use super::CScript;
     use primitive_types::H160;
-    use crate::hash::Hash160;
+    use crate::{hash::Hash160, serialize::AsBytes};
     use super::opcodetype::*;
     use crate::script::standard::{GetScriptForDestination, CTxDestination};
     
@@ -1060,7 +1060,7 @@ mod tests {
         //CScript scriptSig;
         let mut scriptSig: CScript = CScript{v: vec![]};
         //scriptSig << OP_0 << Serialize(s1);
-        scriptSig = OP_0.cs() << s1;
+        scriptSig = OP_0.cs() << CScript::push_data(s1.as_bytes());
         //BOOST_CHECK_EQUAL(p2sh.GetSigOpCount(scriptSig), 3U);
         assert_eq!(p2sh.GetScriptSigOpCount(&scriptSig), 3);
     }
