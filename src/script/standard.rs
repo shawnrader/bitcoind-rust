@@ -130,9 +130,9 @@ pub fn GetScriptForDestination(dest: &CTxDestination) -> CScript {
 }
 
 
-fn IsPushdataOp(opcode: opcodetype) -> bool
+fn IsPushdataOp(opcode: u8) -> bool
 {
-    opcode > OP_FALSE && opcode <= opcodetype::OP_PUSHDATA4
+    opcode > OP_FALSE as u8 && opcode <= opcodetype::OP_PUSHDATA4 as u8
 }
 
 //typedef std::vector<unsigned char> valtype;
@@ -167,20 +167,20 @@ fn MatchPayToPubkeyHash(script: &CScript, pubkeyhash: &mut valtype) -> bool
 }
 
 /** Test for "small positive integer" script opcodes - OP_1 through OP_16. */
-fn IsSmallInteger(opcode: opcodetype) -> bool
+fn IsSmallInteger(opcode: u8) -> bool
 {
-    return opcode >= opcodetype::OP_1 && opcode <= opcodetype::OP_16;
+    return opcode >= opcodetype::OP_1 as u8 && opcode <= opcodetype::OP_16 as u8;
 }
 
 /** Retrieve a minimally-encoded number in range [min,max] from an (opcode, data) pair,
  *  whether it's OP_n or through a push. */
 //static std::optional<int> GetScriptNumber(opcodetype opcode, valtype data, int min, int max)
-fn GetScriptNumber(opcode: &opcodetype, data: &valtype, min: i32, max: i32) -> Option<i32>
+fn GetScriptNumber(opcode: &u8, data: &valtype, min: i32, max: i32) -> Option<i32>
 {
     let count: i32;
     if IsSmallInteger(opcode.clone()) {
         count = CScript::DecodeOP_N(opcode.clone());
-    } else if IsPushdataOp(opcode.clone()) {
+    } else if IsPushdataOp(opcode.clone() as u8) {
         if !super::CheckMinimalPush(&data[0..], opcode.clone()) {
             return None;
         }
@@ -197,7 +197,7 @@ fn GetScriptNumber(opcode: &opcodetype, data: &valtype, min: i32, max: i32) -> O
 
 fn MatchMultisig(script: &mut CScript, required_sigs: &mut i32, pubkeys: &mut Vec<valtype>) -> bool
 {
-    let mut opcode = opcodetype::OP_INVALIDOPCODE;
+    let mut opcode = opcodetype::OP_INVALIDOPCODE as u8;
     let mut data: valtype = vec![];
     //let mut it = script.v.as_mut_slice();
     let v = RefCell::new(script.v.clone());

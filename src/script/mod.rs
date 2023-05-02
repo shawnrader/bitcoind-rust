@@ -447,11 +447,11 @@ impl CScriptNum {
 #[allow(unused_assignments)]
 //bool GetScriptOp(CScriptBase::const_iterator& pc, CScriptBase::const_iterator end, opcodetype& opcodeRet, std::vector<unsigned char>* pvchRet)
 /// Return opcode, slice to start of next op, slice to push data
-fn GetScriptOp<'a>(pc: &mut &'a [u8], opcodeRet: &mut opcodetype, pvchRet: &mut &'a [u8]) -> bool
+fn GetScriptOp<'a>(pc: &mut &'a [u8], opcodeRet: &mut u8, pvchRet: &mut &'a [u8]) -> bool
 {
     let mut nSize: u32 = 0;
    
-    *opcodeRet = OP_INVALIDOPCODE;
+    *opcodeRet = OP_INVALIDOPCODE as u8;
 
     //if (pvchRet)
     //    pvchRet->clear();
@@ -519,9 +519,8 @@ fn GetScriptOp<'a>(pc: &mut &'a [u8], opcodeRet: &mut opcodetype, pvchRet: &mut 
         *pvchRet = &pc[0..nSize as usize];
         *pc = &pc[nSize as usize..];
     }
-    if opcode_reg.is_some() {
-        *opcodeRet = opcode_reg.unwrap();
-    }
+    *opcodeRet = opcode_raw;
+
     return true;
 
 }
@@ -637,7 +636,7 @@ impl CScript
         return GetScriptOp(pc, end(), opcodeRet, &vchRet);
     }*/
     #[allow(unused_mut)]
-    pub fn GetOp<'a>(pc: &mut &'a [u8], opcodeRet: &mut opcodetype, pvchRet: &mut &'a [u8]) -> bool
+    pub fn GetOp<'a>(pc: &mut &'a [u8], opcodeRet: &mut u8, pvchRet: &mut &'a [u8]) -> bool
     {
         GetScriptOp(pc, opcodeRet, pvchRet)
     }
@@ -649,13 +648,13 @@ impl CScript
 
     /** Encode/decode small integers: */
     //static int DecodeOP_N(opcodetype opcode)
-    pub fn DecodeOP_N(opcode: opcodetype) -> i32
+    pub fn DecodeOP_N(opcode: u8) -> i32
     {
-        if opcode == OP_0
+        if opcode == OP_0 as u8
         {
             return 0;
         }
-        assert!(opcode >= OP_1 && opcode <= OP_16);
+        assert!(opcode >= OP_1 as u8 && opcode <= OP_16 as u8);
         opcode as i32 - (OP_1 as i32 - 1)
     }
 
@@ -685,22 +684,22 @@ impl CScript
         //const_iterator pc = begin();
         let pc = &mut &self.v[0..];
         //opcodetype lastOpcode = OP_INVALIDOPCODE;
-        let mut lastOpcode: opcodetype = OP_INVALIDOPCODE;
+        let mut lastOpcode = OP_INVALIDOPCODE as u8;
         while pc.len() > 0
         {
             let mut pvchRet: &[u8] = &[];
-            let mut opcode: opcodetype = opcodetype::OP_INVALIDOPCODE;
+            let mut opcode = opcodetype::OP_INVALIDOPCODE as u8;
             if CScript::GetOp(pc, &mut opcode, &mut pvchRet) == false
             {
                 break;
             }
-            if opcode == OP_CHECKSIG || opcode == OP_CHECKSIGVERIFY
+            if opcode == OP_CHECKSIG as u8 || opcode == OP_CHECKSIGVERIFY as u8
             {
                 n += 1;
             }
-            else if opcode == OP_CHECKMULTISIG || opcode == OP_CHECKMULTISIGVERIFY
+            else if opcode == OP_CHECKMULTISIG as u8 || opcode == OP_CHECKMULTISIGVERIFY as u8
             {
-                if fAccurate && lastOpcode >= OP_1 && lastOpcode <= OP_16
+                if fAccurate && lastOpcode >= OP_1 as u8 && lastOpcode <= OP_16 as u8
                 {
                     n += CScript::DecodeOP_N(lastOpcode);
                 }
@@ -751,16 +750,16 @@ impl CScript
         let mut pc = &mut &scriptSig.v[0..];
         let mut vData: &[u8] = &[];
         while pc.len() > 0 {
-            let mut opcode: opcodetype = opcodetype::OP_INVALIDOPCODE;
+            let mut opcode = opcodetype::OP_INVALIDOPCODE as u8;
             if CScript::GetOp(pc, &mut opcode, &mut vData) == false {
                 return 0;
             }
-            if opcode > OP_16 {
+            if opcode > OP_16 as u8{
                 return 0;
             }
         }
 
-        /// ... and return its opcount:
+        // ... and return its opcount:
         let subscript = CScript::new(vData.to_vec());
         return subscript.GetSigOpCount(true);
     }
@@ -808,7 +807,7 @@ impl CScript
         }
         if (self.v[1] as usize + 2) == self.v.len()
         {
-            let opcode = opcodetype::from_u8(self.v[0]).unwrap();
+            let opcode = self.v[0];
             *version = CScript::DecodeOP_N(opcode);
             //program = std::vector<unsigned char>(this->begin() + 2, this->end());
             program.clone_from_slice(&self.v[2.. ]);
@@ -824,7 +823,7 @@ impl CScript
     {
         while pc.len() > 0
         {
-            let mut opcode = opcodetype::OP_INVALIDOPCODE;
+            let mut opcode = opcodetype::OP_INVALIDOPCODE as u8;
             let mut pvchRet: &[u8] = &[];
             let mut pc = pc;
             if CScript::GetOp(&mut pc, &mut opcode, &mut pvchRet)
@@ -833,7 +832,7 @@ impl CScript
                 // push-type opcode, however execution of OP_RESERVED fails, so
                 // it's not relevant to P2SH/BIP62 as the scriptSig would fail prior to
                 // the P2SH special validation code being executed.
-                if opcode > OP_16
+                if opcode > OP_16 as u8
                 {
                     return false;
                 }
@@ -1005,13 +1004,13 @@ impl ShlAssign<Vec<u8>> for CScript {
 
 
 // bool CheckMinimalPush(const std::vector<unsigned char>& data, opcodetype opcode) {
-pub fn CheckMinimalPush(data: &[u8], opcode: opcodetype) -> bool
+pub fn CheckMinimalPush(data: &[u8], opcode: u8) -> bool
 {
     // Excludes OP_1NEGATE, OP_1-16 since they are by definition minimal
-    assert!(0 <= opcode.clone() as u8 && opcode <= OP_PUSHDATA4);
+    assert!(0 <= opcode.clone() as u8 && opcode <= OP_PUSHDATA4 as u8);
     if data.len() == 0 {
         // Should have used OP_0.
-        return opcode == OP_0;
+        return opcode == OP_0 as u8;
     } else if data.len() == 1 && data[0] >= 1 && data[0] <= 16 {
         // Should have used OP_1 .. OP_16.
         return false;
@@ -1023,10 +1022,10 @@ pub fn CheckMinimalPush(data: &[u8], opcode: opcodetype) -> bool
         return opcode as u8 == data.len() as u8;
     } else if data.len() <= 255 {
         // Must have used OP_PUSHDATA.
-        return opcode == OP_PUSHDATA1;
+        return opcode == OP_PUSHDATA1 as u8;
     } else if data.len() <= 65535 {
         // Must have used OP_PUSHDATA2.
-        return opcode == OP_PUSHDATA2;
+        return opcode == OP_PUSHDATA2 as u8;
     }
     return true;
 }

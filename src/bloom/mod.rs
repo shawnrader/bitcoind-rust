@@ -131,7 +131,7 @@ impl CBloomFilter {
             //while (pc < txout.scriptPubKey.end())
             while pc.len() > 0
             {
-                let mut opcode: opcodetype = opcodetype::OP_INVALIDOPCODE;
+                let mut opcode = opcodetype::OP_INVALIDOPCODE as u8;
 
                 if !CScript::GetOp(&mut pc, &mut opcode, &mut data)
                 {
@@ -181,7 +181,7 @@ impl CBloomFilter {
             let mut data: &[u8] = &[];
             while pc.len() > 0
             {
-                let mut opcode: opcodetype = opcodetype::OP_INVALIDOPCODE;
+                let mut opcode = opcodetype::OP_INVALIDOPCODE as u8;
                 if !CScript::GetOp(&mut pc, &mut opcode, &mut data)
                 {
                     break;
