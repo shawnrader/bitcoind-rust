@@ -79,6 +79,10 @@ uint64_t static inline ReadBE64(const unsigned char* ptr)
     return be64toh(x);
 }
 */
+pub fn ReadBE64(ptr: &[u8]) -> u64
+{
+    BigEndian::read_u64(ptr)
+}
 
 /* void static inline WriteBE32(unsigned char* ptr, uint32_t x)
 {
