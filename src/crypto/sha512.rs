@@ -26,7 +26,7 @@ impl CSHA512 {
 impl Hasher for CSHA512 {
     const OUTPUT_SIZE: usize = 64;
 
-    fn Write(&mut self, mut data: &[u8], len: usize) -> &mut Self
+    fn Write(&mut self, mut data: &mut [u8], len: usize) -> &mut Self
     {
         //const unsigned char* end = data + len;
         let mut end = len;
@@ -39,7 +39,7 @@ impl Hasher for CSHA512 {
             // bytes += 128 - bufsize;
             self.bytes += 128 - bufsize as u64;
             //data += 128 - bufsize;
-            data = &data[(128-bufsize)..];
+            data = &mut data[(128-bufsize)..];
             Transform(&mut self.s, &mut self.buf);
             bufsize = 0;
         }
@@ -48,9 +48,9 @@ impl Hasher for CSHA512 {
         {
             //size_t blocks = (end - data) / 128;
             let blocks: usize = data.len() / 128;
-            Transform(&mut self.s, &mut data);
+            Transform(&mut self.s, data);
             //data += 128 * blocks;
-            data = &data[(128 * blocks)..];
+            data = &mut data[(128 * blocks)..];
             self.bytes += 128 * blocks as u64;
         }
         //if (end > data) {
@@ -322,6 +322,7 @@ fn Transform(s: &mut [u64], chunk: &mut [u8])
 
 mod tests {
     use crate::crypto::Hasher;
+    use super::CSHA512;
     /*
     template<typename Hasher, typename In, typename Out>
     static void TestVector(const Hasher &h, const In &in, const Out &out) {
@@ -365,46 +366,46 @@ mod tests {
 
     //static void TestSHA512(const std::string &in, const std::string &hexout) { TestVector(CSHA512(), in, ParseHex(hexout));}
     fn TestSHA512(inStr: &str, hexout: &str) {
-        TestVector(CSHA512(), inStr, ParseHex(hexout));
+        TestVector(&CSHA512::new(), inStr, hexout);
     }
 
     #[test]
     fn test_sha512_testvectors() {
 
         TestSHA512("",
-                "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce"
-                "47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e");
+                "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce\
+                47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e");
         TestSHA512("abc",
-                "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a"
-                "2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f");
+                "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a\
+                2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f");
         TestSHA512("message digest",
-                "107dbf389d9e9f71a3a95f6c055b9251bc5268c2be16d6c13492ea45b0199f33"
-                "09e16455ab1e96118e8a905d5597b72038ddb372a89826046de66687bb420e7c");
+                "107dbf389d9e9f71a3a95f6c055b9251bc5268c2be16d6c13492ea45b0199f33\
+                09e16455ab1e96118e8a905d5597b72038ddb372a89826046de66687bb420e7c");
         TestSHA512("secure hash algorithm",
-                "7746d91f3de30c68cec0dd693120a7e8b04d8073cb699bdce1a3f64127bca7a3"
-                "d5db502e814bb63c063a7a5043b2df87c61133395f4ad1edca7fcf4b30c3236e");
+                "7746d91f3de30c68cec0dd693120a7e8b04d8073cb699bdce1a3f64127bca7a3\
+                d5db502e814bb63c063a7a5043b2df87c61133395f4ad1edca7fcf4b30c3236e");
         TestSHA512("SHA512 is considered to be safe",
-                "099e6468d889e1c79092a89ae925a9499b5408e01b66cb5b0a3bd0dfa51a9964"
-                "6b4a3901caab1318189f74cd8cf2e941829012f2449df52067d3dd5b978456c2");
+                "099e6468d889e1c79092a89ae925a9499b5408e01b66cb5b0a3bd0dfa51a9964\
+                6b4a3901caab1318189f74cd8cf2e941829012f2449df52067d3dd5b978456c2");
         TestSHA512("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq",
-                "204a8fc6dda82f0a0ced7beb8e08a41657c16ef468b228a8279be331a703c335"
-                "96fd15c13b1b07f9aa1d3bea57789ca031ad85c7a71dd70354ec631238ca3445");
+                "204a8fc6dda82f0a0ced7beb8e08a41657c16ef468b228a8279be331a703c335\
+                96fd15c13b1b07f9aa1d3bea57789ca031ad85c7a71dd70354ec631238ca3445");
         TestSHA512("For this sample, this 63-byte string will be used as input data",
-                "b3de4afbc516d2478fe9b518d063bda6c8dd65fc38402dd81d1eb7364e72fb6e"
-                "6663cf6d2771c8f5a6da09601712fb3d2a36c6ffea3e28b0818b05b0a8660766");
+                "b3de4afbc516d2478fe9b518d063bda6c8dd65fc38402dd81d1eb7364e72fb6e\
+                6663cf6d2771c8f5a6da09601712fb3d2a36c6ffea3e28b0818b05b0a8660766");
         TestSHA512("This is exactly 64 bytes long, not counting the terminating byte",
-                "70aefeaa0e7ac4f8fe17532d7185a289bee3b428d950c14fa8b713ca09814a38"
-                "7d245870e007a80ad97c369d193e41701aa07f3221d15f0e65a1ff970cedf030");
-        TestSHA512("abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmno"
-                "ijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu",
-                "8e959b75dae313da8cf4f72814fc143f8f7779c6eb9f7fa17299aeadb6889018"
-                "501d289e4900f7e4331b99dec4b5433ac7d329eeb6dd26545e96e55b874be909");
-        TestSHA512(std::string(1000000, 'a'),
-                "e718483d0ce769644e2e42c7bc15b4638e1f98b13b2044285632a803afa973eb"
-                "de0ff244877ea60a4cb0432ce577c31beb009c5c2c49aa2e4eadb217ad8cc09b");
-        TestSHA512(test1,
-                "40cac46c147e6131c5193dd5f34e9d8bb4951395f27b08c558c65ff4ba2de594"
-                "37de8c3ef5459d76a52cedc02dc499a3c9ed9dedbfb3281afd9653b8a112fafc");
+                "70aefeaa0e7ac4f8fe17532d7185a289bee3b428d950c14fa8b713ca09814a38\
+                7d245870e007a80ad97c369d193e41701aa07f3221d15f0e65a1ff970cedf030");
+        TestSHA512("abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmno\
+                ijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu",
+                "8e959b75dae313da8cf4f72814fc143f8f7779c6eb9f7fa17299aeadb6889018\
+                501d289e4900f7e4331b99dec4b5433ac7d329eeb6dd26545e96e55b874be909");
+        //TestSHA512(std::string(1000000, 'a'),
+        //        "e718483d0ce769644e2e42c7bc15b4638e1f98b13b2044285632a803afa973eb\
+        //        de0ff244877ea60a4cb0432ce577c31beb009c5c2c49aa2e4eadb217ad8cc09b");
+        //TestSHA512(test1,
+        //        "40cac46c147e6131c5193dd5f34e9d8bb4951395f27b08c558c65ff4ba2de594\
+         //       37de8c3ef5459d76a52cedc02dc499a3c9ed9dedbfb3281afd9653b8a112fafc");
 
     }
 }
