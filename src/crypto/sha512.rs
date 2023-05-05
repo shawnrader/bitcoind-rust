@@ -4,6 +4,7 @@
 
 use crate::crypto::common::{WriteBE64, ReadBE64};
 use wrapping_arithmetic::wrappit;
+use crate::crypto::Hasher;
 
 pub struct CSHA512
 {
@@ -13,7 +14,6 @@ pub struct CSHA512
 }
 
 impl CSHA512 {
-    pub const OUTPUT_SIZE: usize = 64;
 
     pub fn new() -> Self {
         let mut s = [0 as u64; 8];
@@ -21,8 +21,12 @@ impl CSHA512 {
         Self {s, buf: [0; 128],  bytes: 0}
     }
 
+}
 
-    pub fn Write(&mut self, mut data: &[u8], len: usize) -> &mut Self
+impl Hasher for CSHA512 {
+    const OUTPUT_SIZE: usize = 64;
+
+    fn Write(&mut self, mut data: &[u8], len: usize) -> &mut Self
     {
         //const unsigned char* end = data + len;
         let mut end = len;
@@ -61,8 +65,9 @@ impl CSHA512 {
         self
     }
 
-    pub fn Finalize(&mut self, hash: &mut [u8; CSHA512::OUTPUT_SIZE])
+    fn Finalize(&mut self, hash: &mut [u8])
     {
+        assert!(hash.len() == Self::OUTPUT_SIZE);
         //static const unsigned char pad[64] = {0x80};
         let mut pad: [u8; 128] = [0x80; 128];
         //unsigned char sizedesc[8];
@@ -81,7 +86,7 @@ impl CSHA512 {
     }
 
 
-    pub fn Reset(&mut self) -> &mut Self
+    fn Reset(&mut self) -> &mut Self
     {
         self.bytes = 0;
         Initialize(&mut self.s);
@@ -316,6 +321,53 @@ fn Transform(s: &mut [u64], chunk: &mut [u8])
 }
 
 mod tests {
+    use crate::crypto::Hasher;
+    /*
+    template<typename Hasher, typename In, typename Out>
+    static void TestVector(const Hasher &h, const In &in, const Out &out) {
+        Out hash;
+        BOOST_CHECK(out.size() == h.OUTPUT_SIZE);
+        hash.resize(out.size());
+        {
+            // Test that writing the whole input string at once works.
+            Hasher(h).Write((const uint8_t*)in.data(), in.size()).Finalize(hash.data());
+            BOOST_CHECK(hash == out);
+        }
+        for (int i=0; i<32; i++) {
+            // Test that writing the string broken up in random pieces works.
+            Hasher hasher(h);
+            size_t pos = 0;
+            while (pos < in.size()) {
+                size_t len = InsecureRandRange((in.size() - pos + 1) / 2 + 1);
+                hasher.Write((const uint8_t*)in.data() + pos, len);
+                pos += len;
+                if (pos > 0 && pos + 2 * out.size() > in.size() && pos < in.size()) {
+                    // Test that writing the rest at once to a copy of a hasher works.
+                    Hasher(hasher).Write((const uint8_t*)in.data() + pos, in.size() - pos).Finalize(hash.data());
+                    BOOST_CHECK(hash == out);
+                }
+            }
+            hasher.Finalize(hash.data());
+            BOOST_CHECK(hash == out);
+        }
+    } */
+    fn TestVector<H: Hasher>(h: &H, inStr: &str, outStr: &str) {
+
+        assert!(outStr.len() == H::OUTPUT_SIZE);
+        //hash.resize(outStr.len());
+        //{
+            // Test that writing the whole input string at once works.
+        //    Hasher(h).Write(inStr.data(), in.size()).Finalize(hash.data());
+        //    BOOST_CHECK(hash == out);
+        //}
+        //assert_eq!(hash, out);
+    }
+
+    //static void TestSHA512(const std::string &in, const std::string &hexout) { TestVector(CSHA512(), in, ParseHex(hexout));}
+    fn TestSHA512(inStr: &str, hexout: &str) {
+        TestVector(CSHA512(), inStr, ParseHex(hexout));
+    }
+
     #[test]
     fn test_sha512_testvectors() {
 
