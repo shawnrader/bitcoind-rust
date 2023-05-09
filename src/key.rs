@@ -1,3 +1,4 @@
+use crate::random::GetStrongRandBytes;
 
 struct CKey {
     fValid: bool,
@@ -12,15 +13,16 @@ impl CKey {
     fn new() -> CKey {
         CKey {
             fValid: false,
-            value: String::new(),
+            fCompressed: false,
+            keydata: vec![0; 32],
         }
     }
 
     pub fn set(&mut self, vch: &[u8], fCompressedIn: bool) {
         if vch.len() != self.keydata.len() {
             self.fValid = false;
-        } else if (Check(vch)) {
-            self.keydata = vch;
+        } else if Self::Check(vch) {
+            self.keydata.copy_from_slice(vch);
             self.fValid = true;
             self.fCompressed = fCompressedIn;
         } else {
@@ -28,15 +30,15 @@ impl CKey {
         }
     }
 
-    pub fn Check(vch: &Vec<u8>) -> bool {
+    pub fn Check(vch: &[u8]) -> bool {
         todo!();
         //secp256k1_ec_seckey_verify(secp256k1_context_sign, vch)
     }
 
-    pub fn MakeNewKey(fCompressed: bool) {
+    pub fn MakeNewKey(&self, fCompressedIn: bool) {
         loop  {
-            GetStrongRandBytes(keydata);
-            if !Check(self.keydata) {
+            GetStrongRandBytes(&self.keydata[..]);
+            if !Self::Check(&self.keydata) {
                 break;
             }
         };

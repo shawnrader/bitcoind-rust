@@ -7,7 +7,7 @@ use byteorder::{ByteOrder, BigEndian, LittleEndian};
     return le16toh(x);
 } */
 
-fn ReadLE16(ptr: &[u8]) -> u16
+pub fn ReadLE16(ptr: &[u8]) -> u16
 {
     //let mut rdr = Cursor::new(ptr);
     //rdr::read_u16::<LittleEndian>().unwrap()
@@ -29,6 +29,11 @@ uint64_t static inline ReadLE64(const unsigned char* ptr)
     memcpy((char*)&x, ptr, 8);
     return le64toh(x);
 } */
+
+pub fn ReadLE64(ptr: &[u8]) -> u64
+{
+    LittleEndian::read_u64(ptr)
+}
 
 /* 
 void static inline WriteLE16(unsigned char* ptr, uint16_t x)

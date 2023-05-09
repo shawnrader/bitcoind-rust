@@ -9,6 +9,8 @@ pub mod version;
 pub mod consensus;
 pub mod pubkey;
 pub mod crypto;
+pub mod key;
+pub mod random;
 
 fn main() {
     println!("Hello, world!");

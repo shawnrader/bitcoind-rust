@@ -1039,6 +1039,7 @@ mod tests {
     use super::opcodetype::*;
     use crate::script::standard::{GetScriptForDestination, CTxDestination};
     use crate::pubkey::CPubKey;
+    use crate::key::CKey;
     
     #[test]
     fn test_GetSigOpCount() {

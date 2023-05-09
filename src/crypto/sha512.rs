@@ -323,6 +323,7 @@ fn Transform(s: &mut [u64], chunk: &mut [u8])
 mod tests {
     use crate::crypto::Hasher;
     use super::CSHA512;
+    use hex;
     /*
     template<typename Hasher, typename In, typename Out>
     static void TestVector(const Hasher &h, const In &in, const Out &out) {
@@ -355,13 +356,14 @@ mod tests {
     fn TestVector<H: Hasher>(h: &H, inStr: &str, outStr: &str) {
 
         assert!(outStr.len() == H::OUTPUT_SIZE);
-        //hash.resize(outStr.len());
-        //{
-            // Test that writing the whole input string at once works.
-        //    Hasher(h).Write(inStr.data(), in.size()).Finalize(hash.data());
-        //    BOOST_CHECK(hash == out);
-        //}
-        //assert_eq!(hash, out);
+        let mut hash: [u8; CSHA512::OUTPUT_SIZE] = [0; CSHA512::OUTPUT_SIZE];
+
+
+
+        let mut bytes: &[u8];
+        bytes.copy_from_slice(inStr.as_bytes());
+        h.Write(&mut bytes, bytes.len()).Finalize(&mut hash[..]);
+        assert!(hex::encode(&hash) == outStr.to_string());
     }
 
     //static void TestSHA512(const std::string &in, const std::string &hexout) { TestVector(CSHA512(), in, ParseHex(hexout));}
