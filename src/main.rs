@@ -2,6 +2,7 @@
 pub mod bloom;
 pub mod script;
 pub mod hash;
+pub mod logging;
 pub mod primitives;
 pub mod streams;
 pub mod serialize;
@@ -11,6 +12,7 @@ pub mod pubkey;
 pub mod crypto;
 pub mod key;
 pub mod random;
+pub mod time;
 
 fn main() {
     println!("Hello, world!");

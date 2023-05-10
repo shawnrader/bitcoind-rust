@@ -8,4 +8,5 @@ pub trait Hasher {
     fn Write(&mut self, data: &mut [u8], len: usize) -> &mut Self;
     fn Finalize(&mut self, data: &mut [u8]);
     fn Reset(&mut self) -> &mut Self;
+    fn Size(&self) -> usize;
 }

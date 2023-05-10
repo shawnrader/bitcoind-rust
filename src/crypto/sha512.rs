@@ -92,6 +92,11 @@ impl Hasher for CSHA512 {
         Initialize(&mut self.s);
         self
     }
+
+    fn Size(&self) -> usize
+    {
+        self.bytes as usize
+    }
 }
 
 //uint64_t inline Ch(uint64_t x, uint64_t y, uint64_t z) { return z ^ (x & (y ^ z)); }
@@ -353,22 +358,23 @@ mod tests {
             BOOST_CHECK(hash == out);
         }
     } */
-    fn TestVector<H: Hasher>(h: &H, inStr: &str, outStr: &str) {
+    fn TestVector<H: Hasher>(h: &mut H, inStr: &str, outStr: &str) {
 
         assert!(outStr.len() == H::OUTPUT_SIZE);
         let mut hash: [u8; CSHA512::OUTPUT_SIZE] = [0; CSHA512::OUTPUT_SIZE];
 
 
 
-        let mut bytes: &[u8];
+        let mut bytes = vec![];
         bytes.copy_from_slice(inStr.as_bytes());
-        h.Write(&mut bytes, bytes.len()).Finalize(&mut hash[..]);
+        let len = bytes.len();
+        h.Write(&mut bytes[..], len).Finalize(&mut hash[..]);
         assert!(hex::encode(&hash) == outStr.to_string());
     }
 
     //static void TestSHA512(const std::string &in, const std::string &hexout) { TestVector(CSHA512(), in, ParseHex(hexout));}
     fn TestSHA512(inStr: &str, hexout: &str) {
-        TestVector(&CSHA512::new(), inStr, hexout);
+        TestVector(&mut CSHA512::new(), inStr, hexout);
     }
 
     #[test]

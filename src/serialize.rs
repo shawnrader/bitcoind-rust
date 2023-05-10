@@ -93,7 +93,6 @@ impl<T> ShlAssign<T> for Ser  where T: Serializer {
 
 mod tests {
     use super::Serializer;
-    use std::ops::Shl;
     use super::Ser;
 
     

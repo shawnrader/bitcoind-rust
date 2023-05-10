@@ -35,9 +35,9 @@ impl CKey {
         //secp256k1_ec_seckey_verify(secp256k1_context_sign, vch)
     }
 
-    pub fn MakeNewKey(&self, fCompressedIn: bool) {
+    pub fn MakeNewKey(&mut self, fCompressedIn: bool) {
         loop  {
-            GetStrongRandBytes(&self.keydata[..]);
+            GetStrongRandBytes(&mut self.keydata[..]);
             if !Self::Check(&self.keydata) {
                 break;
             }
