@@ -28,8 +28,6 @@ impl Hasher for CSHA512 {
 
     fn Write(&mut self, mut data: &mut [u8], len: usize) -> &mut Self
     {
-        //const unsigned char* end = data + len;
-        let mut end = len;
         let mut bufsize: usize = (self.bytes % 128) as usize;
         //if (bufsize && bufsize + len >= 128) {
         if bufsize > 0 && bufsize + len >= 128 {

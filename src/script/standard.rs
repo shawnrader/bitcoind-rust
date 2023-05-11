@@ -117,7 +117,7 @@ namespace {
     }
 */
 pub fn GetScriptForDestination(dest: &CTxDestination) -> CScript {
-    let mut script = CScript::new(Vec::new());
+    let script = CScript::new(Vec::new());
     match dest {
         CTxDestination::CNoDestination => script,
         CTxDestination::PKHash(keyID) => OP_DUP.cs() << OP_HASH160.cs() << CScript::push_data(keyID.as_bytes()) << OP_EQUALVERIFY.cs() << OP_CHECKSIG.cs(),

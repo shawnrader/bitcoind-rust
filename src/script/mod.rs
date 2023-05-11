@@ -464,7 +464,6 @@ fn GetScriptOp<'a>(pc: &mut &'a [u8], opcodeRet: &mut u8, pvchRet: &mut &'a [u8]
     //    return false;
     //unsigned int opcode = *pc++;
     let opcode_raw = pc[0];
-    let opcode_reg = opcodetype::from_u8(pc[0]);
     *pc = &pc[1..];
 
     // Immediate operand
@@ -747,7 +746,7 @@ impl CScript
         // This is a pay-to-script-hash scriptPubKey;
         // get the last item that the scriptSig
         // pushes onto the stack:
-        let mut pc = &mut &scriptSig.v[0..];
+        let pc = &mut &scriptSig.v[0..];
         let mut vData: &[u8] = &[];
         while pc.len() > 0 {
             let mut opcode = opcodetype::OP_INVALIDOPCODE as u8;

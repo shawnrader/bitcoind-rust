@@ -20,8 +20,6 @@ impl CSHA256 {
 
     pub fn Write(&mut self, mut data: &[u8], len: usize) -> &mut Self
     {
-        //const unsigned char* end = data + len;
-        let mut end = len;
         let mut bufsize: usize = (self.bytes % 64) as usize;
         //if (bufsize && bufsize + len >= 64) {
         if bufsize > 0 && bufsize + len >= 64 {
