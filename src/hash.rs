@@ -1,3 +1,7 @@
+// Copyright (c) 2013-2021 The Bitcoin Core developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 use primitive_types::{U256, H256, H160};
 use std::cmp::min;
 use std::io::Read;

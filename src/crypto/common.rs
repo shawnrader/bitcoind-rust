@@ -1,3 +1,7 @@
+// Copyright (c) 2014-2020 The Bitcoin Core developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 use byteorder::{ByteOrder, BigEndian, LittleEndian};
 
 //uint16_t static inline ReadLE16(const unsigned char* ptr)

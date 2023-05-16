@@ -1,3 +1,8 @@
+// Copyright (c) 2009-2021 The Bitcoin Core developers
+// Copyright (c) 2017 The Zcash developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 use crate::random::GetStrongRandBytes;
 use crate::secp256k1::{secp256k1_ec_seckey_verify, secp256k1_ec_seckey_negate, secp256k1_ec_pubkey_create, secp256k1_ec_pubkey_serialize,
                        secp256k1_context, secp256k1_pubkey, SECP256K1_EC_COMPRESSED, SECP256K1_EC_UNCOMPRESSED,};
