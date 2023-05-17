@@ -560,7 +560,7 @@ fn secp256k1_fe_mul(r: &mut secp256k1_fe, a: &secp256k1_fe, b: &secp256k1_fe) {
 }
  
 // static void secp256k1_fe_sqr(secp256k1_fe *r, const secp256k1_fe *a) {
-fn secp256k1_fe_sqr(r: &mut secp256k1_fe, a: &secp256k1_fe) {
+pub fn secp256k1_fe_sqr(r: &mut secp256k1_fe, a: &secp256k1_fe) {
     #[cfg(feature = "verify")] {
         VERIFY_CHECK(a.magnitude <= 8);
         secp256k1_fe_verify(a);

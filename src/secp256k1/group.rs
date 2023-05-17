@@ -4,7 +4,7 @@
  * file COPYING or https://www.opensource.org/licenses/mit-license.php.*
  ***********************************************************************/
 
-use super::field_5x52::{secp256k1_fe, secp256k1_fe_storage, SECP256K1_FE_CONST, SECP256K1_FE_STORAGE_CONST};
+use super::field_5x52::{secp256k1_fe, secp256k1_fe_storage, secp256k1_fe_sqr, SECP256K1_FE_CONST, SECP256K1_FE_STORAGE_CONST};
 use crate::SECP256K1_FE_STORAGE_CONST_GET;
 
  /** A group element in affine coordinates on the secp256k1 curve,
@@ -780,7 +780,7 @@ fn secp256k1_gej_add_ge(r: &mut secp256k1_gej, a: &secp256k1_gej, b: &secp256k1_
     secp256k1_fe_cmov(&n, &m, degenerate);              /* n = M^3 * Malt (2) */
     secp256k1_fe_sqr(&t, &rr_alt);                      /* t = Ralt^2 (1) */
     secp256k1_fe_mul(&r.z, &a.z, &m_alt);             /* r.z = Z3 = Malt*Z (1) */
-    infinity = secp256k1_fe_normalizes_to_zero(&r.z) & ~a.infinity;
+    infinity = secp256k1_fe_normalizes_to_zero(&r.z) & !a.infinity;
     secp256k1_fe_add(&t, &q);                           /* t = Ralt^2 + Q (2) */
     r.x = t;                                           /* r.x = X3 = Ralt^2 + Q (2) */
     secp256k1_fe_mul_int(&t, 2);                        /* t = 2*X3 (4) */

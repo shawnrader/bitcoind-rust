@@ -7,6 +7,7 @@ use ecmult_gen::secp256k1_ecmult_gen_context;
 
 pub mod ecmult_gen;
 pub mod field_5x52;
+pub mod field_5x52_int128;
 pub mod group;
 
 /* Limbs of the secp256k1 order. */
