@@ -8,6 +8,8 @@
 
 //use super::SECP256K1_FLAGS_TYPE_COMPRESSION;
 
+use super::field_5x52_int128::{secp256k1_fe_mul_inner, secp256k1_fe_sqr_inner};
+
 pub struct secp256k1_fe {
      /* X = sum(i=0..4, n[i]*2^(i*52)) mod p
       * where p = 2^256 - 0x1000003D1
@@ -511,7 +513,7 @@ fn secp256k1_fe_negate(r: &mut secp256k1_fe, a: &secp256k1_fe, m: i32) {
     }
 }
  
-fn secp256k1_fe_mul_int(r: &mut secp256k1_fe, a: i32) {
+pub fn secp256k1_fe_mul_int(r: &mut secp256k1_fe, a: i32) {
      r.n[0] *= a;
      r.n[1] *= a;
      r.n[2] *= a;
@@ -542,7 +544,7 @@ fn secp256k1_fe_add(r: &mut secp256k1_fe, a: &secp256k1_fe) {
  }
  
 // static void secp256k1_fe_mul(secp256k1_fe *r, const secp256k1_fe *a, const secp256k1_fe * SECP256K1_RESTRICT b) {
-fn secp256k1_fe_mul(r: &mut secp256k1_fe, a: &secp256k1_fe, b: &secp256k1_fe) {
+pub fn secp256k1_fe_mul(r: &mut secp256k1_fe, a: &secp256k1_fe, b: &secp256k1_fe) {
     #[cfg(feature = "verify")] {
         VERIFY_CHECK(a.magnitude <= 8);
         VERIFY_CHECK(b.magnitude <= 8);

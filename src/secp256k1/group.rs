@@ -4,7 +4,7 @@
  * file COPYING or https://www.opensource.org/licenses/mit-license.php.*
  ***********************************************************************/
 
-use super::field_5x52::{secp256k1_fe, secp256k1_fe_storage, secp256k1_fe_sqr, SECP256K1_FE_CONST, SECP256K1_FE_STORAGE_CONST};
+use super::field_5x52::{secp256k1_fe, secp256k1_fe_storage, secp256k1_fe_sqr, secp256k1_fe_mul, SECP256K1_FE_CONST, SECP256K1_FE_STORAGE_CONST};
 use crate::SECP256K1_FE_STORAGE_CONST_GET;
 
  /** A group element in affine coordinates on the secp256k1 curve,
@@ -750,8 +750,9 @@ fn secp256k1_gej_add_ge(r: &mut secp256k1_gej, a: &secp256k1_gej, b: &secp256k1_
     secp256k1_fe_negate(&m_alt, &u2, 1);                /* Malt = -X2*Z1^2 */
     secp256k1_fe_mul(&tt, &u1, &m_alt);                 /* tt = -U1*U2 (2) */
     secp256k1_fe_add(&rr, &tt);                         /* rr = R = T^2-U1*U2 (3) */
-    /** If lambda = R/M = 0/0 we have a problem (except in the "trivial"
-     *  case that Z = z1z2 = 0, and this is special-cased later on). */
+    /* If lambda = R/M = 0/0 we have a problem (except in the "trivial"
+     *  case that Z = z1z2 = 0, and this is special-cased later on).
+     */
     degenerate = secp256k1_fe_normalizes_to_zero(&m) &
                  secp256k1_fe_normalizes_to_zero(&rr);
     /* This only occurs when y1 == -y2 and x1^3 == x2^3, but x1 != x2.
