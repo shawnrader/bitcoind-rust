@@ -102,12 +102,10 @@ fn ec_seckey_import_der(ctx: &secp256k1_context, out32: &mut [u8; 32], mut secke
  * key32 must point to a 32-byte raw private key.
  */
 //int ec_seckey_export_der(const secp256k1_context *ctx, unsigned char *seckey, size_t *seckeylen, const unsigned char *key32, bool compressed) {
-fn ec_seckey_export_der(ctx: &secp256k1_context, seckey: &mut [u8], seckeylen: &mut usize, key32: &[u8; 32], compressed: bool) -> bool {
-    assert!(*seckeylen >= CKey::SIZE);
+fn ec_seckey_export_der(ctx: &secp256k1_context, seckey: &mut [u8], key32: &[u8; 32], compressed: bool) -> bool {
     let mut pubkey: secp256k1_pubkey;
     let mut pubkeylen: usize = 0;
     if !secp256k1_ec_pubkey_create(ctx, &mut pubkey, key32) {
-        *seckeylen = 0;
         return false;
     }
     if compressed {
@@ -138,8 +136,7 @@ fn ec_seckey_export_der(ctx: &secp256k1_context, seckey: &mut [u8], seckeylen: &
         //ptr += pubkeylen;
         ptr = &mut ptr[pubkeylen..];
         //*seckeylen = ptr - seckey;
-        *seckeylen = ptr.as_ptr() as usize - seckey.as_ptr() as usize;
-        assert!(*seckeylen == CKey::COMPRESSED_SIZE);
+        //*seckeylen = ptr.as_ptr() as usize - seckey.as_ptr() as usize;
     } else {
         let begin: [u8; 9] = [
             0x30,0x82,0x01,0x13,0x02,0x01,0x01,0x04,0x20
@@ -169,11 +166,13 @@ fn ec_seckey_export_der(ctx: &secp256k1_context, seckey: &mut [u8], seckeylen: &
         secp256k1_ec_pubkey_serialize(ctx, ptr, &mut pubkeylen, &pubkey, SECP256K1_EC_UNCOMPRESSED);
         //ptr += pubkeylen;
         ptr = &mut ptr[pubkeylen..];
-        *seckeylen = ptr.len() - seckey.len();
-        assert!(*seckeylen == CKey::SIZE);
+        //*seckeylen = ptr.len() - seckey.len();
+        //assert!(*seckeylen == CKey::SIZE);
     }
     return true;
 }
+
+type CPrivKey = [u8; 279];
 
 pub struct CKey {
     fValid: bool,
@@ -234,11 +233,9 @@ impl CKey {
         let mut seckey: CPrivKey;
         let mut seckeylen: usize;
 
-        seckey.resize(Self::SIZE);
-        seckeylen = Self::SIZE;
-        let ret = ec_seckey_export_der(&self.secp256k1_context_sign, seckey.data(), &mut seckeylen, &self.keydata, self.fCompressed);
+        //seckey.resize(Self::SIZE);
+        let ret = ec_seckey_export_der(&self.secp256k1_context_sign, &mut seckey, &self.keydata, self.fCompressed);
         assert!(ret);
-        seckey.resize(seckeylen);
         return seckey;
     }
     
@@ -250,7 +247,7 @@ impl CKey {
         let ret = secp256k1_ec_pubkey_create(&self.secp256k1_context_sign, &mut pubkey, &self.keydata);
         assert!(ret);
         let flags = if self.fCompressed { SECP256K1_EC_COMPRESSED } else { SECP256K1_EC_UNCOMPRESSED };
-        secp256k1_ec_pubkey_serialize(&self.secp256k1_context_sign, &mut result.data, &mut clen, &pubkey, flags);
+        secp256k1_ec_pubkey_serialize(&self.secp256k1_context_sign, &mut result.vch, &mut clen, &pubkey, flags);
         //assert(result.size() == clen);
         //assert(result.IsValid());
         return result;

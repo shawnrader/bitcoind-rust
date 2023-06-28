@@ -7,6 +7,7 @@ use crate::script::{CScript, CScriptNum, OP_FALSE};
 use crate::script::interpreter::*;
 use crate::script::opcodetype::{self, *};
 use crate::pubkey::{self, XOnlyPubKey};
+use crate::pubkey::CPubKey;
 use primitive_types::{H160, H256};
 use std::cell::RefCell;
 
@@ -141,17 +142,17 @@ type valtype = Vec<u8>;
 //static bool MatchPayToPubkey(const CScript& script, valtype& pubkey)
 fn MatchPayToPubkey(script: &CScript, pubkey: &mut valtype) -> bool
 {
-    if script.v.len() == pubkey::SIZE + 2 && script.v[0] == pubkey::SIZE as u8 && *script.v.last().unwrap() == opcodetype::OP_CHECKSIG as u8
+    if script.v.len() == CPubKey::SIZE + 2 && script.v[0] == CPubKey::SIZE as u8 && *script.v.last().unwrap() == opcodetype::OP_CHECKSIG as u8
     {
         //pubkey = valtype(script.begin() + 1, script.begin() + pubkey::SIZE + 1);
-        pubkey.copy_from_slice(&script.v[0..pubkey::SIZE + 1]);
-        return pubkey::ValidSize(pubkey);
+        pubkey.copy_from_slice(&script.v[0..CPubKey::SIZE + 1]);
+        return CPubKey::ValidSize(pubkey);
     }
-    if script.v.len() == pubkey::COMPRESSED_SIZE + 2 && script.v[0] == pubkey::COMPRESSED_SIZE as u8 && *script.v.last().unwrap() == opcodetype::OP_CHECKSIG as u8
+    if script.v.len() == CPubKey::COMPRESSED_SIZE + 2 && script.v[0] == CPubKey::COMPRESSED_SIZE as u8 && *script.v.last().unwrap() == opcodetype::OP_CHECKSIG as u8
     {
         //pubkey = valtype(script.begin() + 1, script.begin() + pubkey::COMPRESSED_SIZE + 1);
-        pubkey.copy_from_slice(&script.v[1..pubkey::COMPRESSED_SIZE + 1]);
-        return pubkey::ValidSize(pubkey);
+        pubkey.copy_from_slice(&script.v[1..CPubKey::COMPRESSED_SIZE + 1]);
+        return CPubKey::ValidSize(pubkey);
     }
     return false;
 }
@@ -225,7 +226,7 @@ fn MatchMultisig(script: &mut CScript, required_sigs: &mut i32, pubkeys: &mut Ve
         return false;
     }
     *required_sigs = req_sigs.unwrap();
-    while CScript::GetOp(&mut it, &mut opcode, &mut &data[0..]) && pubkey::ValidSize(&data)
+    while CScript::GetOp(&mut it, &mut opcode, &mut &data[0..]) && CPubKey::ValidSize(&data)
     {
         pubkeys.push(data.clone());
     }
