@@ -4,13 +4,24 @@
  * file COPYING or https://www.opensource.org/licenses/mit-license.php.*
  ***********************************************************************/
 use super::{secp256k1_scalar, secp256k1_scalar_clear};
-use super::group::{secp256k1_gej, secp256k1_ge};
+use super::group::*;
+use crate::secp256k1::precomputed_ec_mult_gen::*;
 
 pub const ECMULT_GEN_PREC_BITS: i32 = 4;
 pub const ECMULT_WINDOW_SIZE: i32 = 15;
 
-fn ECMULT_GEN_PREC_G(bits: u64) -> u64 {1 << bits}
-fn ECMULT_GEN_PREC_N(bits: u64) -> u64 {256 / bits}
+//fn ECMULT_GEN_PREC_G(bits: u64) -> u64 {1 << bits}
+macro_rules! ECMULT_GEN_PREC_G {
+    ($bits:expr) => {
+        1 << $bits
+    };
+}
+
+macro_rules! ECMULT_GEN_PREC_N {
+    ($bits:expr) => {
+        256 / $bits
+    };
+}
 
 pub struct secp256k1_ecmult_gen_context {
     /* Whether the context has been built. */

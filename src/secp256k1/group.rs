@@ -76,7 +76,7 @@ fn SECP256K1_GEJ_CONST_INFINITY() -> secp256k1_gej {
     }
 }
 
-struct secp256k1_ge_storage {
+pub struct secp256k1_ge_storage {
     x: secp256k1_fe_storage,
     y: secp256k1_fe_storage,
 }
@@ -298,7 +298,7 @@ fn secp256k1_ge_set_infinity(r: &mut secp256k1_ge) {
 }
 
 //static void secp256k1_gej_clear(secp256k1_gej *r) {
-fn secp256k1_gej_clear(r: &mut secp256k1_gej) {
+pub fn secp256k1_gej_clear(r: &mut secp256k1_gej) {
     r.infinity = 0;
     secp256k1_fe_clear(&r.x);
     secp256k1_fe_clear(&r.y);
@@ -842,7 +842,7 @@ fn sec256k1_gej_cmov(r: &mut secp256k1_gej, a: &secp256k1_gej, flag: i32) {
 }
 
 //static SECP256K1_INLINE void secp256k1_ge_storage_cmov(secp256k1_ge_storage *r, const secp256k1_ge_storage *a, int flag) {
-fn secp256k1_ge_storage_cmov(r: &mut secp256k1_ge_storage, a: &secp256k1_ge_storage, flag: i32) {
+pub fn secp256k1_ge_storage_cmov(r: &mut secp256k1_ge_storage, a: &secp256k1_ge_storage, flag: i32) {
     secp256k1_fe_storage_cmov(&r.x, &a.x, flag);
     secp256k1_fe_storage_cmov(&r.y, &a.y, flag);
 }
