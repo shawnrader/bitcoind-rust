@@ -1,4 +1,5 @@
 #![allow (nonstandard_style)]
+#![allow(warnings)]
 pub mod bloom;
 pub mod script;
 pub mod hash;

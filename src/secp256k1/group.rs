@@ -4,8 +4,9 @@
  * file COPYING or https://www.opensource.org/licenses/mit-license.php.*
  ***********************************************************************/
 
-use super::field_5x52::{secp256k1_fe, secp256k1_fe_storage, secp256k1_fe_sqr, secp256k1_fe_mul, SECP256K1_FE_CONST, SECP256K1_FE_STORAGE_CONST};
+use super::field_5x52::{secp256k1_fe, secp256k1_fe_storage, secp256k1_fe_sqr, secp256k1_fe_mul, SECP256K1_FE_CONST};
 use crate::SECP256K1_FE_STORAGE_CONST_GET;
+use crate::SECP256K1_FE_STORAGE_CONST;
 
  /** A group element in affine coordinates on the secp256k1 curve,
  *  or occasionally on an isomorphic curve of the form y^2 = x^3 + 7*t^6.
@@ -81,12 +82,22 @@ pub struct secp256k1_ge_storage {
     y: secp256k1_fe_storage,
 }
 
-fn SECP256K1_GE_STORAGE_CONST(a: u32, b: u32, c: u32, d: u32, e: u32, f: u32, g: u32, h: u32, i: u32, j: u32, k: u32, l: u32, m: u32, n: u32, o: u32, p: u32) -> secp256k1_ge_storage {
-    secp256k1_ge_storage {
-        x: SECP256K1_FE_STORAGE_CONST(a as u64,b as u64,c as u64,d as u64,e as u64,f as u64,g as u64,h as u64),
-        y: SECP256K1_FE_STORAGE_CONST(i as u64,j as u64,k as u64,l as u64, m as u64, n as u64, o as u64,p as u64),
+#[macro_export]
+macro_rules! SECP256K1_GE_STORAGE_CONST {
+    ($a:expr, $b:expr, $c:expr, $d:expr, $e:expr, $f:expr, $g:expr, $h:expr, $i:expr, $j:expr, $k:expr, $l:expr, $m:expr, $n:expr, $o:expr, $p:expr) => {
+        secp256k1_ge_storage {
+            x: SECP256K1_FE_STORAGE_CONST!($a as u64, $b as u64, $c as u64, $d as u64, $e as u64, $f as u64, $g as u64, $h as u64),
+            y: SECP256K1_FE_STORAGE_CONST!($i as u64, $j as u64, $k as u64, $l as u64, $m as u64, $n as u64, $o as u64, $p as u64),
+        }
     }
 }
+
+// fn SECP256K1_GE_STORAGE_CONST(a: u32, b: u32, c: u32, d: u32, e: u32, f: u32, g: u32, h: u32, i: u32, j: u32, k: u32, l: u32, m: u32, n: u32, o: u32, p: u32) -> secp256k1_ge_storage {
+//     secp256k1_ge_storage {
+//         x: SECP256K1_FE_STORAGE_CONST(a as u64,b as u64,c as u64,d as u64,e as u64,f as u64,g as u64,h as u64),
+//         y: SECP256K1_FE_STORAGE_CONST(i as u64,j as u64,k as u64,l as u64, m as u64, n as u64, o as u64,p as u64),
+//     }
+// }
 
 //fn SECP256K1_GE_STORAGE_CONST_GET(t: secp256k1_ge_storage) -> (secp256k1_fe_storage, secp256k1_fe_storage) {
 //    (SECP256K1_FE_STORAGE_CONST_GET!(t.x), SECP256K1_FE_STORAGE_CONST_GET!(t.y))
@@ -131,7 +142,7 @@ fn SECP256K1_G() -> secp256k1_ge {
 //#if defined(EXHAUSTIVE_TEST_ORDER)
 //#  if EXHAUSTIVE_TEST_ORDER == 13
 #[cfg(EXHAUSTIVE_TEST_ORDER = "13")]
-const  secp256k1_ge_const_g: secp256k1_ge = SECP256K1_G_ORDER_13();
+pub const  secp256k1_ge_const_g: secp256k1_ge = SECP256K1_G_ORDER_13();
 
 #[cfg(EXHAUSTIVE_TEST_ORDER = "13")]
 const secp256k1_fe_const_b: secp256k1_fe = SECP256K1_FE_CONST(
@@ -141,14 +152,14 @@ const secp256k1_fe_const_b: secp256k1_fe = SECP256K1_FE_CONST(
 
 //#  elif EXHAUSTIVE_TEST_ORDER == 199
 #[cfg(EXHAUSTIVE_TEST_ORDER = "199")]
-const secp256k1_ge_const_g: secp256k1_ge = SECP256K1_G_ORDER_199();
+pub const secp256k1_ge_const_g: secp256k1_ge = SECP256K1_G_ORDER_199();
 #[cfg(EXHAUSTIVE_TEST_ORDER = "199")]
 const secp256k1_fe_const_b: secp256k1_fe = SECP256K1_FE_CONST(
     0x2cca28fa, 0xfc614b80, 0x2a3db42b, 0x00ba00b1,
     0xbea8d943, 0xdace9ab2, 0x9536daea, 0x0074defb
 );
 
-const secp256k1_ge_const_g: secp256k1_ge = SECP256K1_G();
+pub const secp256k1_ge_const_g: secp256k1_ge = SECP256K1_G();
 
 const secp256k1_fe_const_b: secp256k1_fe = SECP256K1_FE_CONST(0, 0, 0, 0, 0, 0, 0, 7);
 
@@ -306,7 +317,7 @@ pub fn secp256k1_gej_clear(r: &mut secp256k1_gej) {
 }
 
 //static void secp256k1_ge_clear(secp256k1_ge *r) {
-fn secp256k1_ge_clear(r: &mut secp256k1_ge) {
+pub fn secp256k1_ge_clear(r: &mut secp256k1_ge) {
     r.infinity = 0;
     secp256k1_fe_clear(&r.x);
     secp256k1_fe_clear(&r.y);
@@ -333,7 +344,7 @@ fn secp256k1_ge_set_xo_var(r: &mut secp256k1_ge, x: &secp256k1_fe, odd: i32) -> 
 }
 
 //static void secp256k1_gej_set_ge(secp256k1_gej *r, const secp256k1_ge *a) {
-fn secp256k1_gej_set_ge(r: &mut secp256k1_gej, a: &secp256k1_ge) {
+pub fn secp256k1_gej_set_ge(r: &mut secp256k1_gej, a: &secp256k1_ge) {
    r.infinity = a.infinity;
    r.x = a.x;
    r.y = a.y;
@@ -352,7 +363,7 @@ fn secp256k1_gej_eq_x_var(x: &secp256k1_fe, a: &secp256k1_gej) -> i32 {
 }
 
 //static void secp256k1_gej_neg(secp256k1_gej *r, const secp256k1_gej *a) {
-fn secp256k1_gej_neg(r: &mut secp256k1_gej, a: &secp256k1_gej) {
+pub fn secp256k1_gej_neg(r: &mut secp256k1_gej, a: &secp256k1_gej) {
     r.infinity = a.infinity;
     r.x = a.x;
     r.y = a.y;
@@ -486,7 +497,7 @@ fn secp256k1_gej_add_var(r: &mut secp256k1_gej, a: &secp256k1_gej, b: &secp256k1
         if (secp256k1_fe_normalizes_to_zero_var(&i)) {
             secp256k1_gej_double_var(r, a, rzr);
         } else {
-            if (rzr != NULL) {
+            if rzr != NULL {
                 secp256k1_fe_set_int(rzr, 0);
             }
             secp256k1_gej_set_infinity(r);
@@ -496,7 +507,7 @@ fn secp256k1_gej_add_var(r: &mut secp256k1_gej, a: &secp256k1_gej, b: &secp256k1
 
     r.infinity = 0;
     secp256k1_fe_mul(&t, &h, &b.z);
-    if (rzr != NULL) {
+    if rzr != NULL {
         *rzr = t;
     }
     secp256k1_fe_mul(&r.z, &a.z, &t);
@@ -665,7 +676,7 @@ fn secp256k1_gej_add_zinv_var(r: &mut secp256k1_gej, a: &secp256k1_gej, b: &secp
 
 
 //static void secp256k1_gej_add_ge(secp256k1_gej *r, const secp256k1_gej *a, const secp256k1_ge *b) {
-fn secp256k1_gej_add_ge(r: &mut secp256k1_gej, a: &secp256k1_gej, b: &secp256k1_ge) {
+pub fn secp256k1_gej_add_ge(r: &mut secp256k1_gej, a: &secp256k1_gej, b: &secp256k1_ge) {
     /* Operations: 7 mul, 5 sqr, 24 add/cmov/half/mul_int/negate/normalize_weak/normalizes_to_zero */
     //secp256k1_fe zz, u1, u2, s1, s2, t, tt, m, n, q, rr;
     let mut zz: secp256k1_fe;
@@ -826,7 +837,7 @@ fn secp256k1_ge_to_storage(r: &mut secp256k1_ge_storage, a: &secp256k1_ge) {
 }
 
 //static void secp256k1_ge_from_storage(secp256k1_ge *r, const secp256k1_ge_storage *a) {
-fn secp256k1_ge_from_storage(r: &mut secp256k1_ge, a: &secp256k1_ge_storage) {
+pub fn secp256k1_ge_from_storage(r: &mut secp256k1_ge, a: &secp256k1_ge_storage) {
     secp256k1_fe_from_storage(&r.x, &a.x);
     secp256k1_fe_from_storage(&r.y, &a.y);
     r.infinity = 0;

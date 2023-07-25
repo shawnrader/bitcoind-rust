@@ -63,15 +63,29 @@ pub struct secp256k1_fe_storage {
     pub n: [u64; 4],
 }
  
-pub fn SECP256K1_FE_STORAGE_CONST(d7: u64, d6: u64, d5: u64, d4: u64, d3: u64, d2: u64, d1: u64, d0: u64) -> secp256k1_fe_storage {
-    secp256k1_fe_storage {
-        n : [(d0) | ((d1 as u64) << 32),
-             (d2) | ((d3 as u64) << 32),
-             (d4) | ((d5 as u64) << 32),
-             (d6) | ((d7 as u64) << 32),
-        ]
+// pub fn SECP256K1_FE_STORAGE_CONST(d7: u64, d6: u64, d5: u64, d4: u64, d3: u64, d2: u64, d1: u64, d0: u64) -> secp256k1_fe_storage {
+//     secp256k1_fe_storage {
+//         n : [(d0) | ((d1 as u64) << 32),
+//              (d2) | ((d3 as u64) << 32),
+//              (d4) | ((d5 as u64) << 32),
+//              (d6) | ((d7 as u64) << 32),
+//         ]
+//     }
+// }
+
+#[macro_export] 
+macro_rules! SECP256K1_FE_STORAGE_CONST {
+    ($d0:expr, $d1:expr, $d2:expr, $d3:expr, $d4:expr, $d5:expr, $d6:expr, $d7:expr) => {
+        secp256k1_fe_storage {
+            n : [($d0) | (($d1 as u64) << 32),
+                 ($d2) | (($d3 as u64) << 32),
+                 ($d4) | (($d5 as u64) << 32),
+                 ($d6) | (($d7 as u64) << 32),
+            ]
+        }
     }
 }
+
 
 #[macro_export] 
 macro_rules! SECP256K1_FE_STORAGE_CONST_GET {
@@ -335,7 +349,7 @@ fn secp256k1_fe_normalizes_to_zero_var(r: &secp256k1_fe) -> bool {
     return (z0 == 0) | (z1 == 0xFFFFFFFFFFFFF_u64);
 }
  
-fn secp256k1_fe_set_int(r: &mut secp256k1_fe, a: i32) {
+pub fn secp256k1_fe_set_int(r: &mut secp256k1_fe, a: i32) {
     //VERIFY_CHECK(0 <= a && a <= 0x7FFF);
     r.n = [a as u64, 0, 0, 0, 0];
 #[cfg(feature = "verify")]
@@ -368,7 +382,7 @@ fn secp256k1_fe_is_odd(a: &secp256k1_fe) -> bool {
 }
  
 // SECP256K1_INLINE static void secp256k1_fe_clear(secp256k1_fe *a) {
-fn secp256k1_fe_clear(a: &mut secp256k1_fe) {
+pub fn secp256k1_fe_clear(a: &mut secp256k1_fe) {
     #[cfg(feature = "verify")] {
         a.magnitude = 0;
         a.normalized = 1;

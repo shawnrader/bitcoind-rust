@@ -6,20 +6,24 @@
 use super::{secp256k1_scalar, secp256k1_scalar_clear};
 use super::group::*;
 use crate::secp256k1::precomputed_ec_mult_gen::*;
+use crate::secp256k1::field_5x52::*;
+use crate::secp256k1::*;
 
 pub const ECMULT_GEN_PREC_BITS: i32 = 4;
 pub const ECMULT_WINDOW_SIZE: i32 = 15;
 
 //fn ECMULT_GEN_PREC_G(bits: u64) -> u64 {1 << bits}
+#[macro_export]
 macro_rules! ECMULT_GEN_PREC_G {
     ($bits:expr) => {
         1 << $bits
     };
 }
 
+#[macro_export]
 macro_rules! ECMULT_GEN_PREC_N {
     ($bits:expr) => {
-        256 / $bits
+        256 as usize / $bits as usize
     };
 }
 
@@ -73,8 +77,8 @@ impl secp256k1_ecmult_gen_context {
      */
     pub fn secp256k1_ecmult_gen(ctx: &secp256k1_ecmult_gen_context, r: &secp256k1_gej, gn: &secp256k1_scalar) {
         let bits = ECMULT_GEN_PREC_BITS;
-        let g = ECMULT_GEN_PREC_G(bits as u64) as i32;
-        let n = ECMULT_GEN_PREC_N(bits as u64) as i32;
+        let g = ECMULT_GEN_PREC_G!(bits as u64) as i32;
+        let n = ECMULT_GEN_PREC_N!(bits as u64) as i32;
     
         let mut adds: secp256k1_ge_storage;
         let mut gnb: secp256k1_scalar;
@@ -116,7 +120,8 @@ impl secp256k1_ecmult_gen_context {
         let mut gb: secp256k1_gej;
         let mut s: secp256k1_fe;
         let mut nonce32: [u8; 32] = [0; 32];
-        let mut rng: secp256k1_rfc6979_hmac_sha256;
+        todo!();
+        //let mut rng: secp256k1_rfc6979_hmac_sha256;
         let mut overflow: i32;
         let mut keydata: [u8; 64] = [0; 64];
 
