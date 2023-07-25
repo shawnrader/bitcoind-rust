@@ -9,6 +9,7 @@ pub mod ecmult_gen;
 pub mod field_5x52;
 pub mod field_5x52_int128;
 pub mod group;
+pub mod hash;
 pub mod precomputed_ec_mult_gen;
 
 /* Limbs of the secp256k1 order. */
