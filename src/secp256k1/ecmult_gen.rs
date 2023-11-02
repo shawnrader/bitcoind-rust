@@ -1,3 +1,5 @@
+use core::slice::SlicePattern;
+
 /***********************************************************************
  * Copyright (c) 2013, 2014 Pieter Wuille                              *
  * Distributed under the MIT software license, see the accompanying    *
@@ -76,7 +78,7 @@ impl secp256k1_ecmult_gen_context {
      * the intermediate sums while computing a*G.
      * The prec values are stored in secp256k1_ecmult_gen_prec_table[i][n_i] = n_i * (PREC_G)^i * G + U_i.
      */
-    pub fn secp256k1_ecmult_gen(ctx: &secp256k1_ecmult_gen_context, r: &secp256k1_gej, gn: &secp256k1_scalar) {
+    pub fn secp256k1_ecmult_gen(ctx: &secp256k1_ecmult_gen_context, r: &mut secp256k1_gej, gn: &secp256k1_scalar) {
         let bits = ECMULT_GEN_PREC_BITS;
         let g = ECMULT_GEN_PREC_G!(bits as u64) as i32;
         let n = ECMULT_GEN_PREC_N!(bits as u64) as i32;
@@ -104,14 +106,16 @@ impl secp256k1_ecmult_gen_context {
                  *    by Dag Arne Osvik, Adi Shamir, and Eran Tromer
                  *    (https://www.tau.ac.il/~tromer/papers/cache.pdf)
                  */
-                secp256k1_ge_storage_cmov(&adds, &secp256k1_ecmult_gen_prec_table[i][j], j == n_i);
+                unsafe {
+                    secp256k1_ge_storage_cmov(&mut adds, &secp256k1_ecmult_gen_prec_table[i][j], j == n_i);
+                }
             }
-            secp256k1_ge_from_storage(&add, &adds);
+            secp256k1_ge_from_storage(&mut add, &adds);
             secp256k1_gej_add_ge(r, r, &add);
         }
         n_i = 0;
-        secp256k1_ge_clear(&add);
-        secp256k1_scalar_clear(&gnb);
+        secp256k1_ge_clear(&mut add);
+        secp256k1_scalar_clear(&mut gnb);
     }
     
     /* Setup blinding values for secp256k1_ecmult_gen. */
@@ -144,30 +148,31 @@ impl secp256k1_ecmult_gen_context {
             //memcpy(keydata + 32, seed32, 32);
             keydata[32..64].copy_from_slice(&seed32[..32]);
         }
-        secp256k1_rfc6979_hmac_sha256_initialize(&rng, keydata, if seed32 { 64 } else { 32 });
+        secp256k1_rfc6979_hmac_sha256_initialize(&mut rng, keydata.as_slice());
         //memset(keydata, 0, sizeof(keydata));
         keydata = [0; 64];
         /* Accept unobservably small non-uniformity. */
-        secp256k1_rfc6979_hmac_sha256_generate(&rng, nonce32, 32);
+        secp256k1_rfc6979_hmac_sha256_generate(&rng, nonce32.as_mut_slice());
         overflow = !secp256k1_fe_set_b32(&s, nonce32);
         overflow |= secp256k1_fe_is_zero(&s);
         secp256k1_fe_cmov(&s, &secp256k1_fe_one, overflow);
         /* Randomize the projection to defend against multiplier sidechannels. */
         secp256k1_gej_rescale(&ctx.initial, &s);
-        secp256k1_fe_clear(&s);
-        secp256k1_rfc6979_hmac_sha256_generate(&rng, nonce32, 32);
-        secp256k1_scalar_set_b32(&b, nonce32, NULL);
+        secp256k1_fe_clear(&mut s);
+        secp256k1_rfc6979_hmac_sha256_generate(&rng, nonce32.as_mut_slice());
+        let mut overflow:i32 = 0;
+        secp256k1_scalar_set_b32(&mut b, &nonce32, &mut overflow);
         /* A blinding value of 0 works, but would undermine the projection hardening. */
         secp256k1_scalar_cmov(&b, &secp256k1_scalar_one, secp256k1_scalar_is_zero(&b));
-        secp256k1_rfc6979_hmac_sha256_finalize(&rng);
+        secp256k1_rfc6979_hmac_sha256_finalize(&mut rng);
         //memset(nonce32, 0, 32);
         nonce32 = [0; 32];
         secp256k1_ecmult_gen(ctx, &gb, &b);
         secp256k1_scalar_negate(&b, &b);
         ctx.blind = b;
         ctx.initial = gb;
-        secp256k1_scalar_clear(&b);
-        secp256k1_gej_clear(&gb);
+        secp256k1_scalar_clear(&mut b);
+        secp256k1_gej_clear(&mut gb);
     }
     
 }

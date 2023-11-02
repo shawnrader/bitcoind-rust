@@ -567,7 +567,7 @@ pub fn secp256k1_fe_mul(r: &mut secp256k1_fe, a: &secp256k1_fe, b: &secp256k1_fe
         VERIFY_CHECK(r != b);
         VERIFY_CHECK(a != b);
     }
-    secp256k1_fe_mul_inner(r.n, a.n, b.n);
+    secp256k1_fe_mul_inner(r.n.as_mut_slice(), a.n.as_mut_slice(), b.n.as_mut_slice());
     #[cfg(feature = "verify")] {
         r.magnitude = 1;
         r.normalized = 0;
@@ -581,7 +581,7 @@ pub fn secp256k1_fe_sqr(r: &mut secp256k1_fe, a: &secp256k1_fe) {
         VERIFY_CHECK(a.magnitude <= 8);
         secp256k1_fe_verify(a);
     }
-    secp256k1_fe_sqr_inner(r.n, a.n);
+    secp256k1_fe_sqr_inner(r.n.as_mut_slice(), a.n.as_mut_slice());
     #[cfg(feature = "verify")] {
         r.magnitude = 1;
         r.normalized = 0;
@@ -791,8 +791,8 @@ fn secp256k1_fe_inv_var(r: &mut secp256k1_fe, x: &secp256k1_fe) {
     let mut s: secp256k1_modinv64_signed62;
 
     tmp = *x;
-    secp256k1_fe_normalize_var(&tmp);
-    secp256k1_fe_to_signed62(&s, &tmp);
+    secp256k1_fe_normalize_var(&mut tmp);
+    secp256k1_fe_to_signed62(&mut s, &tmp);
     secp256k1_modinv64_var(&s, &secp256k1_const_modinfo_fe);
     secp256k1_fe_from_signed62(r, &s);
  
