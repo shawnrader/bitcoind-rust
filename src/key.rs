@@ -239,7 +239,7 @@ impl CKey {
         return seckey;
     }
     
-    fn GetPubKey(&self) -> CPubKey {
+    pub fn GetPubKey(&self) -> CPubKey {
         assert!(self.fValid);
         let mut pubkey: secp256k1_pubkey;
         let mut clen: usize = CPubKey::SIZE;

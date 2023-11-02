@@ -8,6 +8,7 @@ use ecmult_gen::secp256k1_ecmult_gen_context;
 pub mod ecmult_gen;
 pub mod field_5x52;
 pub mod field_5x52_int128;
+pub mod scalar_4x64;
 pub mod group;
 pub mod hash;
 pub mod precomputed_ec_mult_gen;
@@ -104,8 +105,8 @@ impl secp256k1_context {
     }
 }
 
-struct secp256k1_scalar {
-    d: [u64; 4],
+pub struct secp256k1_scalar {
+    pub d: [u64; 4],
 }
 
 impl secp256k1_scalar {

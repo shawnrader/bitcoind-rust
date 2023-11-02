@@ -1070,11 +1070,11 @@ mod tests {
         //BOOST_CHECK_EQUAL(p2sh.GetSigOpCount(scriptSig), 3U);
         assert_eq!(p2sh.GetScriptSigOpCount(&scriptSig), 3);
 
-        let keys: Vec<CPubKey> = vec![];
+        let mut keys: Vec<CPubKey> = vec![];
         for i in 0..3 {
-            let k: CKey;
+            let mut k: CKey;
             k.MakeNewKey(true);
-            keys.push_back(k.GetPubKey());
+            keys.push(k.GetPubKey());
         }
     }
 }

@@ -1,5 +1,3 @@
-use core::slice::SlicePattern;
-
 /***********************************************************************
  * Copyright (c) 2013, 2014 Pieter Wuille                              *
  * Distributed under the MIT software license, see the accompanying    *
@@ -11,9 +9,17 @@ use crate::secp256k1::precomputed_ec_mult_gen::*;
 use crate::secp256k1::field_5x52::*;
 use crate::secp256k1::hash::*;
 use crate::secp256k1::*;
+use crate::secp256k1::field_5x52::*;
+use crate::secp256k1::scalar_4X64::*;
 
 pub const ECMULT_GEN_PREC_BITS: i32 = 4;
 pub const ECMULT_WINDOW_SIZE: i32 = 15;
+
+pub const secp256k1_fe_one: secp256k1_fe = SECP256K1_FE_CONST(0, 0, 0, 0, 0, 0, 0, 1);
+pub const secp256k1_const_beta: secp256k1_fe = SECP256K1_FE_CONST(
+    0x7ae96a2b, 0x657c0710, 0x6e64479e, 0xac3434e9,
+    0x9cf04975, 0x12f58995, 0xc1396c28, 0x719501ee
+);
 
 //fn ECMULT_GEN_PREC_G(bits: u64) -> u64 {1 << bits}
 #[macro_export]
@@ -125,8 +131,7 @@ impl secp256k1_ecmult_gen_context {
         let mut gb: secp256k1_gej;
         let mut s: secp256k1_fe;
         let mut nonce32: [u8; 32] = [0; 32];
-        todo!();
-        //let mut rng: secp256k1_rfc6979_hmac_sha256;
+        let mut rng: secp256k1_rfc6979_hmac_sha256;
         let mut overflow: i32;
         let mut keydata: [u8; 64] = [0; 64];
 
@@ -153,9 +158,9 @@ impl secp256k1_ecmult_gen_context {
         keydata = [0; 64];
         /* Accept unobservably small non-uniformity. */
         secp256k1_rfc6979_hmac_sha256_generate(&rng, nonce32.as_mut_slice());
-        overflow = !secp256k1_fe_set_b32(&s, nonce32);
+        overflow = !secp256k1_fe_set_b32(&mut s, nonce32.as_slice());
         overflow |= secp256k1_fe_is_zero(&s);
-        secp256k1_fe_cmov(&s, &secp256k1_fe_one, overflow);
+        secp256k1_fe_cmov(&mut s, &secp256k1_fe_one, overflow);
         /* Randomize the projection to defend against multiplier sidechannels. */
         secp256k1_gej_rescale(&ctx.initial, &s);
         secp256k1_fe_clear(&mut s);

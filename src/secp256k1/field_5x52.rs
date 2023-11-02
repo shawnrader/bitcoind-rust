@@ -361,14 +361,14 @@ pub fn secp256k1_fe_set_int(r: &mut secp256k1_fe, a: i32) {
 }
  
 // SECP256K1_INLINE static int secp256k1_fe_is_zero(const secp256k1_fe *a) {
-fn secp256k1_fe_is_zero(a: &secp256k1_fe) -> bool {
+pub fn secp256k1_fe_is_zero(a: &secp256k1_fe) -> i32 {
     let t = &a.n;
     #[cfg(feature = "verify")]
     {
         VERIFY_CHECK(a.normalized);
         secp256k1_fe_verify(a);
     }
-     return (t[0] | t[1] | t[2] | t[3] | t[4]) == 0;
+     return ((t[0] | t[1] | t[2] | t[3] | t[4]) == 0) as i32;
  }
  
 // SECP256K1_INLINE static int secp256k1_fe_is_odd(const secp256k1_fe *a) {
@@ -415,9 +415,9 @@ fn secp256k1_fe_cmp_var(a: &secp256k1_fe, b: &secp256k1_fe) -> i32 {
  }
  
 // static int secp256k1_fe_set_b32(secp256k1_fe *r, const unsigned char *a) {
-fn secp256k1_fe_set_b32(r: &mut secp256k1_fe, a: &[u8]) -> bool {
+pub fn secp256k1_fe_set_b32(r: &mut secp256k1_fe, a: &[u8]) -> i32 {
     // int ret;
-    let mut ret: bool;
+    let mut ret: i32;
     r.n[0] = a[31] as u64
             | ((a[30] as u64) << 8)
             | ((a[29] as u64) << 16)
@@ -452,7 +452,7 @@ fn secp256k1_fe_set_b32(r: &mut secp256k1_fe, a: &[u8]) -> bool {
             | ((a[2] as u64) << 24)
             | ((a[1] as u64) << 32)
             | ((a[0] as u64) << 40);
-     ret = !((r.n[4] == 0x0FFFFFFFFFFFF_u64) & ((r.n[3] & r.n[2] & r.n[1]) == 0xFFFFFFFFFFFFF_u64) & (r.n[0] >= 0xFFFFEFFFFFC2F_u64));
+     ret = !((r.n[4] == 0x0FFFFFFFFFFFF_u64) & ((r.n[3] & r.n[2] & r.n[1]) == 0xFFFFFFFFFFFFF_u64) & (r.n[0] >= 0xFFFFEFFFFFC2F_u64)) as i32;
     #[cfg(feature = "verify")] {
         r.magnitude = 1;
         if (ret) {
@@ -590,7 +590,7 @@ pub fn secp256k1_fe_sqr(r: &mut secp256k1_fe, a: &secp256k1_fe) {
  }
  
 // static SECP256K1_INLINE void secp256k1_fe_cmov(secp256k1_fe *r, const secp256k1_fe *a, int flag) {
-fn secp256k1_fe_cmov(r: &mut secp256k1_fe, a: &secp256k1_fe, flag: i32) {
+pub fn secp256k1_fe_cmov(r: &mut secp256k1_fe, a: &secp256k1_fe, flag: i32) {
     let mut mask0: u64;
     let mut mask1: u64;
     // VG_CHECK_VERIFY(r.n, sizeof(r.n));
