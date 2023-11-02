@@ -45,7 +45,7 @@ pub struct secp256k1_hmac_sha256 {
 pub struct secp256k1_rfc6979_hmac_sha256 {
     v: [u8; 32],
     k: [u8; 32],
-    retry: i32,
+    retry: bool,
 }
  
 //  static void secp256k1_rfc6979_hmac_sha256_initialize(secp256k1_rfc6979_hmac_sha256 *rng, const unsigned char *key, size_t keylen);
@@ -358,7 +358,9 @@ pub fn secp256k1_hmac_sha256_initialize(hash: &mut secp256k1_hmac_sha256, key: &
         let mut sha256 = secp256k1_sha256::new();
         secp256k1_sha256_initialize(&mut sha256);
         secp256k1_sha256_write(&mut sha256, key);
-        secp256k1_sha256_finalize(&mut sha256, &mut rkey);
+        let mut hash_final = [0u8; 32];
+        secp256k1_sha256_finalize(&mut sha256, &mut hash_final);
+        rkey[0..32].copy_from_slice(&hash_final);
         rkey[32..64].copy_from_slice(&[0u8; 32]);
     }
 
@@ -392,13 +394,12 @@ pub fn secp256k1_hmac_sha256_write(hash: &mut secp256k1_hmac_sha256, data: &[u8]
 //     memset(temp, 0, 32);
 //     secp256k1_sha256_finalize(&hash->outer, out32);
 // }
-pub fn secp256k1_hmac_sha256_finalize(hash: &mut secp256k1_hmac_sha256, &mut [u8]) {
+pub fn secp256k1_hmac_sha256_finalize(hash: &mut secp256k1_hmac_sha256, out32: &mut [u8]) {
     let mut temp = [0u8; 32];
     secp256k1_sha256_finalize(&mut hash.inner, &mut temp);
-    secp256k1_sha256_write(&mut hash.outer, &temp, 32);
+    secp256k1_sha256_write(&mut hash.outer, &temp);
     temp = [0u8; 32];
-    secp256k1_sha256_finalize(&mut hash.outer, out32);
-
+    secp256k1_sha256_finalize(&mut hash.outer, out32.try_into().unwrap());
 }
 
 // static void secp256k1_rfc6979_hmac_sha256_initialize(secp256k1_rfc6979_hmac_sha256 *rng, const unsigned char *key, size_t keylen) {
@@ -439,25 +440,25 @@ pub fn secp256k1_rfc6979_hmac_sha256_initialize(rng: &mut secp256k1_rfc6979_hmac
     rng.k = [0x00; 32]; /* RFC6979 3.2.c. */
 
     /* RFC6979 3.2.d. */
-    secp256k1_hmac_sha256_initialize(&mut hmac, &rng.k, 32);
-    secp256k1_hmac_sha256_write(&mut hmac, &rng.v, 32);
-    secp256k1_hmac_sha256_write(&mut hmac, &ZERO, 1);
+    secp256k1_hmac_sha256_initialize(&mut hmac, &rng.k);
+    secp256k1_hmac_sha256_write(&mut hmac, &rng.v);
+    secp256k1_hmac_sha256_write(&mut hmac, &ZERO);
     secp256k1_hmac_sha256_write(&mut hmac, key);
-    secp256k1_hmac_sha256_finalize(&mut hmac, &rng.k);
-    secp256k1_hmac_sha256_initialize(&mut hmac, &rng.k, 32);
-    secp256k1_hmac_sha256_write(&mut hmac, &rng.v, 32);
-    secp256k1_hmac_sha256_finalize(&mut hmac, &rng.v);
+    secp256k1_hmac_sha256_finalize(&mut hmac, &mut rng.k);
+    secp256k1_hmac_sha256_initialize(&mut hmac, &rng.k);
+    secp256k1_hmac_sha256_write(&mut hmac, &rng.v);
+    secp256k1_hmac_sha256_finalize(&mut hmac, &mut rng.v);
 
     /* RFC6979 3.2.f. */
-    secp256k1_hmac_sha256_initialize(&mut hmac, &rng.k, 32);
-    secp256k1_hmac_sha256_write(&mut hmac, &rng.v, 32);
-    secp256k1_hmac_sha256_write(&mut hmac, &ONE, 1);
+    secp256k1_hmac_sha256_initialize(&mut hmac, &rng.k);
+    secp256k1_hmac_sha256_write(&mut hmac, &rng.v);
+    secp256k1_hmac_sha256_write(&mut hmac, &ONE);
     secp256k1_hmac_sha256_write(&mut hmac, key);
-    secp256k1_hmac_sha256_finalize(&mut hmac, &rng.k);
-    secp256k1_hmac_sha256_initialize(&mut hmac, &rng.k, 32);
-    secp256k1_hmac_sha256_write(&mut hmac, &rng.v, 32);
-    secp256k1_hmac_sha256_finalize(&mut hmac, &rng.v);
-    rng.retry = 0;
+    secp256k1_hmac_sha256_finalize(&mut hmac, &mut rng.k);
+    secp256k1_hmac_sha256_initialize(&mut hmac, &rng.k);
+    secp256k1_hmac_sha256_write(&mut hmac, &rng.v);
+    secp256k1_hmac_sha256_finalize(&mut hmac, &mut rng.v);
+    rng.retry = false;
 }
 
 
@@ -497,30 +498,32 @@ pub fn secp256k1_rfc6979_hmac_sha256_generate(rng: &secp256k1_rfc6979_hmac_sha25
     static ZERO: [u8; 1] = [0x00];
     if rng.retry {
         let mut hmac: secp256k1_hmac_sha256;
-        secp256k1_hmac_sha256_initialize(&mut hmac, &rng.k, 32);
-        secp256k1_hmac_sha256_write(&mut hmac, &rng.v, 32);
-        secp256k1_hmac_sha256_write(&mut hmac, &ZERO, 1);
-        secp256k1_hmac_sha256_finalize(&mut hmac, &rng.k);
-        secp256k1_hmac_sha256_initialize(&mut hmac, &rng.k, 32);
-        secp256k1_hmac_sha256_write(&mut hmac, &rng.v, 32);
-        secp256k1_hmac_sha256_finalize(&mut hmac, &rng.v);
+        secp256k1_hmac_sha256_initialize(&mut hmac, &rng.k);
+        secp256k1_hmac_sha256_write(&mut hmac, &rng.v);
+        secp256k1_hmac_sha256_write(&mut hmac, &ZERO);
+        secp256k1_hmac_sha256_finalize(&mut hmac, &mut rng.k);
+        secp256k1_hmac_sha256_initialize(&mut hmac, &rng.k);
+        secp256k1_hmac_sha256_write(&mut hmac, &rng.v);
+        secp256k1_hmac_sha256_finalize(&mut hmac, &mut rng.v);
     }
 
+    let mut i = 0;
+    let mut outlen = out.len();
     while outlen > 0 {
         let mut hmac: secp256k1_hmac_sha256;
         let mut now = outlen;
-        secp256k1_hmac_sha256_initialize(&mut hmac, &rng.k, 32);
-        secp256k1_hmac_sha256_write(&mut hmac, &rng.v, 32);
-        secp256k1_hmac_sha256_finalize(&mut hmac, &rng.v);
+        secp256k1_hmac_sha256_initialize(&mut hmac, &rng.k);
+        secp256k1_hmac_sha256_write(&mut hmac, &rng.v);
+        secp256k1_hmac_sha256_finalize(&mut hmac, &mut rng.v);
         if now > 32 {
             now = 32;
         }
-        out[0..now].copy_from_slice(&rng.v[0..now]);
-        out += now;
+        out[i..i + now].copy_from_slice(&rng.v[0..now]);
+        i += now;
         outlen -= now;
     }
 
-    rng.retry = 1;
+    rng.retry = true;
 }
 
 // static void secp256k1_rfc6979_hmac_sha256_finalize(secp256k1_rfc6979_hmac_sha256 *rng) {
@@ -532,5 +535,5 @@ pub fn secp256k1_rfc6979_hmac_sha256_generate(rng: &secp256k1_rfc6979_hmac_sha25
 pub fn secp256k1_rfc6979_hmac_sha256_finalize(rng: &mut secp256k1_rfc6979_hmac_sha256) {
     rng.k = [0u8; 32];
     rng.v = [0u8; 32];
-    rng.retry = 0;
+    rng.retry = false;
 }

@@ -7,6 +7,7 @@ use super::{secp256k1_scalar, secp256k1_scalar_clear};
 use super::group::*;
 use crate::secp256k1::precomputed_ec_mult_gen::*;
 use crate::secp256k1::field_5x52::*;
+use crate::secp256k1::hash::*;
 use crate::secp256k1::*;
 
 pub const ECMULT_GEN_PREC_BITS: i32 = 4;
@@ -56,10 +57,10 @@ impl secp256k1_ecmult_gen_context {
         return ctx.built != 0;
     }
     
-    pub fn secp256k1_ecmult_gen_context_clear(ctx: &secp256k1_ecmult_gen_context) {
+    pub fn secp256k1_ecmult_gen_context_clear(ctx: &mut secp256k1_ecmult_gen_context) {
         ctx.built = 0;
         secp256k1_scalar_clear(&mut ctx.blind);
-        secp256k1_gej_clear(&ctx.initial);
+        secp256k1_gej_clear(&mut ctx.initial);
     }
     
     /* For accelerating the computation of a*G:
@@ -127,12 +128,12 @@ impl secp256k1_ecmult_gen_context {
 
         if seed32.len() == 0 {
             /* When seed is NULL, reset the initial point and blinding value. */
-            secp256k1_gej_set_ge(&ctx.initial, &secp256k1_ge_const_g);
-            secp256k1_gej_neg(&ctx.initial, &ctx.initial);
-            secp256k1_scalar_set_int(&ctx.blind, 1);
+            secp256k1_gej_set_ge(&mut ctx.initial, &secp256k1_ge_const_g);
+            secp256k1_gej_neg(&mut ctx.initial, &ctx.initial);
+            secp256k1_scalar_set_int(&mut ctx.blind, 1);
         }
         /* The prior blinding value (if not reset) is chained forward by including it in the hash. */
-        secp256k1_scalar_get_b32(nonce32, &ctx.blind);
+        secp256k1_scalar_get_b32(&mut nonce32, &ctx.blind);
         /** Using a CSPRNG allows a failure free interface, avoids needing large amounts of random data,
          *   and guards against weak or adversarial seeds.  This is a simpler and safer interface than
          *   asking the caller for blinding values directly and expecting them to retry on failure.
