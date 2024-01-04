@@ -179,7 +179,7 @@ fn secp256k1_fe_normalize(r: &mut secp256k1_fe) {
  
     /* At most a single final reduction is needed; check if the value is >= the field characteristic */
     x = (t4 >> 48) | ((t4 == 0x0FFFFFFFFFFFF_u64) & (m == 0xFFFFFFFFFFFFF_u64)
-         & (t0 >= 0xFFFFEFFFFFC2F_u64));
+         & (t0 >= 0xFFFFEFFFFFC2F_u64)) as u64;
  
     /* Apply the final reduction (for constant-time behaviour, we do it always) */
     t0 += x * 0x1000003D1_u64;
@@ -232,7 +232,7 @@ pub fn secp256k1_fe_normalize_weak(r: &mut secp256k1_fe) {
  }
  
 // static void secp256k1_fe_normalize_var(secp256k1_fe *r) {
-fn secp256k1_fe_normalize_var(r: &mut secp256k1_fe) {
+pub fn secp256k1_fe_normalize_var(r: &mut secp256k1_fe) {
     let (mut t0, mut t1, mut t2, mut t3, mut t4) = (r.n[0], r.n[1], r.n[2], r.n[3], r.n[4]);
  
     /* Reduce t4 at the start so there will be at most a single carry from the first pass */
@@ -251,9 +251,9 @@ fn secp256k1_fe_normalize_var(r: &mut secp256k1_fe) {
  
     /* At most a single final reduction is needed; check if the value is >= the field characteristic */
     x = (t4 >> 48) | ((t4 == 0x0FFFFFFFFFFFF_u64) & (m == 0xFFFFFFFFFFFFF_u64)
-        & (t0 >= 0xFFFFEFFFFFC2F_u64));
+        & (t0 >= 0xFFFFEFFFFFC2F_u64)) as u64;
  
-    if (x) {
+    if (x != 0) {
         t0 += 0x1000003D1_u64;
         t1 += (t0 >> 52); t0 &= 0xFFFFFFFFFFFFF_u64;
         t2 += (t1 >> 52); t1 &= 0xFFFFFFFFFFFFF_u64;
@@ -373,13 +373,13 @@ pub fn secp256k1_fe_is_zero(a: &secp256k1_fe) -> i32 {
  }
  
 // SECP256K1_INLINE static int secp256k1_fe_is_odd(const secp256k1_fe *a) {
-fn secp256k1_fe_is_odd(a: &secp256k1_fe) -> bool {
+pub fn secp256k1_fe_is_odd(a: &secp256k1_fe) -> i32 {
     #[cfg(feature = "verify")]
     {
         VERIFY_CHECK(a.normalized);
         secp256k1_fe_verify(a);
     }
-    return a.n[0] & 1 == 1;
+    return a.n[0] as i32 & 1;
 }
  
 // SECP256K1_INLINE static void secp256k1_fe_clear(secp256k1_fe *a) {
@@ -516,11 +516,11 @@ pub fn secp256k1_fe_negate(r: &mut secp256k1_fe, a: &secp256k1_fe, m: i32) {
     VERIFY_CHECK(0xFFFFFFFFFFFFF_u64 * 2 * (m + 1) >= 0xFFFFFFFFFFFFF_u64 * 2 * m);
     VERIFY_CHECK(0x0FFFFFFFFFFFF_u64 * 2 * (m + 1) >= 0x0FFFFFFFFFFFF_u64 * 2 * m);
     }
-    r.n[0] = 0xFFFFEFFFFFC2F_u64 * 2 * (m + 1) - a.n[0];
-    r.n[1] = 0xFFFFFFFFFFFFF_u64 * 2 * (m + 1) - a.n[1];
-    r.n[2] = 0xFFFFFFFFFFFFF_u64 * 2 * (m + 1) - a.n[2];
-    r.n[3] = 0xFFFFFFFFFFFFF_u64 * 2 * (m + 1) - a.n[3];
-    r.n[4] = 0x0FFFFFFFFFFFF_u64 * 2 * (m + 1) - a.n[4];
+    r.n[0] = 0xFFFFEFFFFFC2F_u64 * 2 * (m as u64 + 1) - a.n[0];
+    r.n[1] = 0xFFFFFFFFFFFFF_u64 * 2 * (m as u64 + 1) - a.n[1];
+    r.n[2] = 0xFFFFFFFFFFFFF_u64 * 2 * (m as u64 + 1) - a.n[2];
+    r.n[3] = 0xFFFFFFFFFFFFF_u64 * 2 * (m as u64 + 1) - a.n[3];
+    r.n[4] = 0x0FFFFFFFFFFFF_u64 * 2 * (m as u64 + 1) - a.n[4];
     #[cfg(feature = "verify")] {
         r.magnitude = m + 1;
         r.normalized = 0;
@@ -529,11 +529,11 @@ pub fn secp256k1_fe_negate(r: &mut secp256k1_fe, a: &secp256k1_fe, m: i32) {
 }
  
 pub fn secp256k1_fe_mul_int(r: &mut secp256k1_fe, a: i32) {
-     r.n[0] *= a;
-     r.n[1] *= a;
-     r.n[2] *= a;
-     r.n[3] *= a;
-     r.n[4] *= a;
+     r.n[0] *= a as u64;
+     r.n[1] *= a as u64;
+     r.n[2] *= a as u64;
+     r.n[3] *= a as u64;
+     r.n[4] *= a as u64;
      #[cfg(feature = "verify")] {
         r.magnitude *= a;
         r.normalized = 0;
@@ -542,7 +542,7 @@ pub fn secp256k1_fe_mul_int(r: &mut secp256k1_fe, a: i32) {
 }
  
 // SECP256K1_INLINE static void secp256k1_fe_add(secp256k1_fe *r, const secp256k1_fe *a) {
-fn secp256k1_fe_add(r: &mut secp256k1_fe, a: &secp256k1_fe) {
+pub fn secp256k1_fe_add(r: &mut secp256k1_fe, a: &secp256k1_fe) {
     #[cfg(feature = "verify")] {
         secp256k1_fe_verify(a);
     }
@@ -611,53 +611,53 @@ pub fn secp256k1_fe_cmov(r: &mut secp256k1_fe, a: &secp256k1_fe, flag: i32) {
     }
 }
  
-fn secp256k1_fe_half(r: &mut secp256k1_fe) {
-    let (t0, t1, t2, t3, t4) = (r.n[0], r.n[1], r.n[2], r.n[3], r.n[4]);
-    let one = 1 as u64;
-    let mask = -((t0 & one) >> 12);
+pub fn secp256k1_fe_half(r: &mut secp256k1_fe) {
+    let (mut t0, mut t1, mut t2, mut t3, mut t4) = (r.n[0], r.n[1], r.n[2], r.n[3], r.n[4]);
+    let one: u64 = 1;
+    let mask: u64 = -(((t0 & one) >> 12) as i64) as u64;
  
     #[cfg(feature = "verify")] {
         secp256k1_fe_verify(r);
         VERIFY_CHECK(r.magnitude < 32);
     }
  
-     /* Bounds analysis (over the rationals).
-      *
-      * Let m = r.magnitude
-      *     C = 0xFFFFFFFFFFFFF_u64 * 2
-      *     D = 0x0FFFFFFFFFFFF_u64 * 2
-      *
-      * Initial bounds: t0..t3 <= C * m
-      *                     t4 <= D * m
-      */
+    /* Bounds analysis (over the rationals).
+     *
+     * Let m = r.magnitude
+     *     C = 0xFFFFFFFFFFFFF_u64 * 2
+     *     D = 0x0FFFFFFFFFFFF_u64 * 2
+     *
+     * Initial bounds: t0..t3 <= C * m
+     *                     t4 <= D * m
+     */
  
-     t0 += 0xFFFFEFFFFFC2F_u64 & mask;
-     t1 += mask;
-     t2 += mask;
-     t3 += mask;
-     t4 += mask >> 4;
+    t0 += 0xFFFFEFFFFFC2F_u64 & mask;
+    t1 += mask;
+    t2 += mask;
+    t3 += mask;
+    t4 += mask >> 4;
  
-     VERIFY_CHECK((t0 & one) == 0);
- 
-     /* t0..t3: added <= C/2
-      *     t4: added <= D/2
-      *
-      * Current bounds: t0..t3 <= C * (m + 1/2)
-      *                     t4 <= D * (m + 1/2)
-      */
- 
-     r.n[0] = (t0 >> 1) + ((t1 & one) << 51);
-     r.n[1] = (t1 >> 1) + ((t2 & one) << 51);
-     r.n[2] = (t2 >> 1) + ((t3 & one) << 51);
-     r.n[3] = (t3 >> 1) + ((t4 & one) << 51);
-     r.n[4] = (t4 >> 1);
- 
-     /* t0..t3: shifted right and added <= C/4 + 1/2
-      *     t4: shifted right
-      *
-      * Current bounds: t0..t3 <= C * (m/2 + 1/2)
-      *                     t4 <= D * (m/2 + 1/4)
-      */
+    #[cfg(feature = "verify")] VERIFY_CHECK((t0 & one) == 0);
+
+    /* t0..t3: added <= C/2
+    *     t4: added <= D/2
+    *
+    * Current bounds: t0..t3 <= C * (m + 1/2)
+    *                     t4 <= D * (m + 1/2)
+    */
+
+    r.n[0] = (t0 >> 1) + ((t1 & one) << 51);
+    r.n[1] = (t1 >> 1) + ((t2 & one) << 51);
+    r.n[2] = (t2 >> 1) + ((t3 & one) << 51);
+    r.n[3] = (t3 >> 1) + ((t4 & one) << 51);
+    r.n[4] = (t4 >> 1);
+
+    /* t0..t3: shifted right and added <= C/4 + 1/2
+    *     t4: shifted right
+    *
+    * Current bounds: t0..t3 <= C * (m/2 + 1/2)
+    *                     t4 <= D * (m/2 + 1/4)
+    */
  
     #[cfg(feature = "verify")] {
     /* Therefore the output magnitude (M) has to be set such that:
@@ -680,13 +680,13 @@ fn secp256k1_fe_half(r: &mut secp256k1_fe) {
 fn secp256k1_fe_storage_cmov(r: &mut secp256k1_fe_storage, a: &secp256k1_fe_storage, flag: i32) {
     let mut mask0: u64;
     let mut mask1: u64;
-     VG_CHECK_VERIFY(r.n, sizeof(r.n));
-     mask0 = flag + !(0 as u64);
-     mask1 = !mask0;
-     r.n[0] = (r.n[0] & mask0) | (a.n[0] & mask1);
-     r.n[1] = (r.n[1] & mask0) | (a.n[1] & mask1);
-     r.n[2] = (r.n[2] & mask0) | (a.n[2] & mask1);
-     r.n[3] = (r.n[3] & mask0) | (a.n[3] & mask1);
+    #[cfg(feature = "verify")] VG_CHECK_VERIFY(r.n, sizeof(r.n));
+    mask0 = flag as u64 + !(0 as u64);
+    mask1 = !mask0;
+    r.n[0] = (r.n[0] & mask0) | (a.n[0] & mask1);
+    r.n[1] = (r.n[1] & mask0) | (a.n[1] & mask1);
+    r.n[2] = (r.n[2] & mask0) | (a.n[2] & mask1);
+    r.n[3] = (r.n[3] & mask0) | (a.n[3] & mask1);
 }
 
 fn secp256k1_fe_to_storage(r: &mut secp256k1_fe_storage, a: &secp256k1_fe) {
@@ -717,18 +717,20 @@ fn secp256k1_fe_from_storage(r: &mut secp256k1_fe, a: &secp256k1_fe_storage) {
 fn secp256k1_fe_from_signed62(r: &mut secp256k1_fe, a: &secp256k1_modinv64_signed62) {
     let M52: u64 = u64::MAX >> 12;
     // const uint64_t a0 = a->v[0], a1 = a->v[1], a2 = a->v[2], a3 = a->v[3], a4 = a->v[4];
-    let (a0, a1, a2, a3, a4) = (a.v[0], a.v[1], a.v[2], a.v[3], a.v[4]);
+    let (a0, a1, a2, a3, a4) = (a.v[0] as u64, a.v[1] as u64, a.v[2] as u64, a.v[3] as u64, a.v[4] as u64);
 
      /* The output from secp256k1_modinv64{_var} should be normalized to range [0,modulus), and
       * have limbs in [0,2^62). The modulus is < 2^256, so the top limb must be below 2^(256-62*4).
       */
-     VERIFY_CHECK(a0 >> 62 == 0);
-     VERIFY_CHECK(a1 >> 62 == 0);
-     VERIFY_CHECK(a2 >> 62 == 0);
-     VERIFY_CHECK(a3 >> 62 == 0);
-     VERIFY_CHECK(a4 >> 8 == 0);
- 
-    r.n[0] =  a0                   & M52;
+    #[cfg(feature = "verify")] {
+        VERIFY_CHECK(a0 >> 62 == 0);
+        VERIFY_CHECK(a1 >> 62 == 0);
+        VERIFY_CHECK(a2 >> 62 == 0);
+        VERIFY_CHECK(a3 >> 62 == 0);
+        VERIFY_CHECK(a4 >> 8 == 0);
+    }
+
+    r.n[0] = a0 & M52;
     r.n[1] = (a0 >> 52 | a1 << 10) & M52;
     r.n[2] = (a1 >> 42 | a2 << 20) & M52;
     r.n[3] = (a2 >> 32 | a3 << 30) & M52;
@@ -745,17 +747,17 @@ fn secp256k1_fe_from_signed62(r: &mut secp256k1_fe, a: &secp256k1_modinv64_signe
 fn secp256k1_fe_to_signed62(r: &mut secp256k1_modinv64_signed62, a: &secp256k1_fe) {
     let M62: u64 = u64::MAX >> 2;
     //const uint64_t a0 = a->n[0], a1 = a->n[1], a2 = a->n[2], a3 = a->n[3], a4 = a->n[4];
-    let (a0, a1, a2, a3, a4) = (a.n[0], a.n[1], a.n[2], a.n[3], a.n[4]);
+    let (a0, a1, a2, a3, a4) = (a.n[0] as u64, a.n[1] as u64, a.n[2] as u64, a.n[3] as u64, a.n[4] as u64);
 
     #[cfg(feature = "verify")] {
         VERIFY_CHECK(a.normalized);
     }
  
-    r.v[0] = (a0       | a1 << 52) & M62;
-    r.v[1] = (a1 >> 10 | a2 << 42) & M62;
-    r.v[2] = (a2 >> 20 | a3 << 32) & M62;
-    r.v[3] = (a3 >> 30 | a4 << 22) & M62;
-    r.v[4] =  a4 >> 40;
+    r.v[0] = ((a0 | a1 << 52) & M62) as i64;
+    r.v[1] = ((a1 >> 10 | a2 << 42) & M62) as i64;
+    r.v[2] = ((a2 >> 20 | a3 << 32) & M62) as i64;
+    r.v[3] = ((a3 >> 30 | a4 << 22) & M62) as i64;
+    r.v[4] =  (a4 >> 40) as i64;
  }
  
 // static const secp256k1_modinv64_modinfo secp256k1_const_modinfo_fe = {
@@ -779,7 +781,7 @@ pub fn secp256k1_fe_inv(r: &mut secp256k1_fe, x: &secp256k1_fe) {
     tmp = *x;
     secp256k1_fe_normalize(&mut tmp);
     secp256k1_fe_to_signed62(&mut s, &tmp);
-    secp256k1_modinv64(&s, &secp256k1_const_modinfo_fe);
+    secp256k1_modinv64(&mut s, &secp256k1_const_modinfo_fe);
     secp256k1_fe_from_signed62(r, &s);
  
     #[cfg(feature = "verify")] {
@@ -787,14 +789,14 @@ pub fn secp256k1_fe_inv(r: &mut secp256k1_fe, x: &secp256k1_fe) {
     }
 }
  
-fn secp256k1_fe_inv_var(r: &mut secp256k1_fe, x: &secp256k1_fe) {
+pub fn secp256k1_fe_inv_var(r: &mut secp256k1_fe, x: &secp256k1_fe) {
     let mut tmp: secp256k1_fe;
     let mut s: secp256k1_modinv64_signed62;
 
     tmp = *x;
     secp256k1_fe_normalize_var(&mut tmp);
     secp256k1_fe_to_signed62(&mut s, &tmp);
-    secp256k1_modinv64_var(&s, &secp256k1_const_modinfo_fe);
+    secp256k1_modinv64_var(&mut s, &secp256k1_const_modinfo_fe);
     secp256k1_fe_from_signed62(r, &s);
  
     #[cfg(feature = "verify")] {

@@ -189,8 +189,8 @@ fn secp256k1_ge_is_infinity(a: &secp256k1_ge) -> bool {
 
 fn secp256k1_ge_neg(r: &mut secp256k1_ge, a: &secp256k1_ge) {
     *r = *a;
-    secp256k1_fe_normalize_weak(&r.y);
-    secp256k1_fe_negate(&r.y, &r.y, 1);
+    secp256k1_fe_normalize_weak(&mut r.y);
+    secp256k1_fe_negate(&mut r.y, &r.y, 1);
 }
 
 fn secp256k1_ge_set_gej(r: &mut secp256k1_ge, a: &secp256k1_gej) {
@@ -198,12 +198,12 @@ fn secp256k1_ge_set_gej(r: &mut secp256k1_ge, a: &secp256k1_gej) {
     let mut z2: secp256k1_fe;
     let mut z3: secp256k1_fe;
     r.infinity = a.infinity;
-    secp256k1_fe_inv(&a.z, &a.z);
+    secp256k1_fe_inv(&mut a.z, &a.z);
     secp256k1_fe_sqr(&mut z2, &a.z);
     secp256k1_fe_mul(&mut z3, &a.z, &z2);
     secp256k1_fe_mul(&mut a.x, &a.x, &z2);
     secp256k1_fe_mul(&mut a.y, &a.y, &z3);
-    secp256k1_fe_set_int(&a.z, 1);
+    secp256k1_fe_set_int(&mut a.z, 1);
     r.x = a.x;
     r.y = a.y;
 }
@@ -212,31 +212,31 @@ fn secp256k1_ge_set_gej(r: &mut secp256k1_ge, a: &secp256k1_gej) {
 fn secp256k1_ge_set_gej_var(r: &mut secp256k1_ge, a: &secp256k1_gej) {
     let mut z2: secp256k1_fe;
     let mut z3: secp256k1_fe;
-    if (a.infinity) {
+    if (a.infinity != 0) {
         secp256k1_ge_set_infinity(r);
         return;
     }
-    secp256k1_fe_inv_var(&a.z, &a.z);
+    secp256k1_fe_inv_var(&mut a.z, &a.z);
     secp256k1_fe_sqr(&mut z2, &a.z);
     secp256k1_fe_mul(&mut z3, &a.z, &z2);
     secp256k1_fe_mul(&mut a.x, &a.x, &z2);
     secp256k1_fe_mul(&mut a.y, &a.y, &z3);
-    secp256k1_fe_set_int(&a.z, 1);
+    secp256k1_fe_set_int(&mut a.z, 1);
     secp256k1_ge_set_xy(r, &a.x, &a.y);
 }
 
 //static void secp256k1_ge_set_all_gej_var(secp256k1_ge *r, const secp256k1_gej *a, size_t len) {
 fn secp256k1_ge_set_all_gej_var(r: &mut [secp256k1_ge], a: &[secp256k1_gej], len: usize) {
     let mut u: secp256k1_fe;
-    let mut i: size_t;
-    let mut last_i: usize = SIZE_MAX;
+    let mut i: usize;
+    let mut last_i: usize = usize::MAX;
 
     for i in 0..len {
-        if (a[i].infinity) {
+        if (a[i].infinity != 0) {
             secp256k1_ge_set_infinity(&mut r[i]);
         } else {
             /* Use destination's x coordinates as scratch space */
-            if (last_i == SIZE_MAX) {
+            if (last_i == usize::MAX) {
                 r[i].x = a[i].z;
             } else {
                 secp256k1_fe_mul(&mut r[i].x, &r[last_i].x, &a[i].z);
@@ -244,25 +244,25 @@ fn secp256k1_ge_set_all_gej_var(r: &mut [secp256k1_ge], a: &[secp256k1_gej], len
             last_i = i;
         }
     }
-    if (last_i == SIZE_MAX) {
+    if (last_i == usize::MAX) {
         return;
     }
-    secp256k1_fe_inv_var(&u, &r[last_i].x);
+    secp256k1_fe_inv_var(&mut u, &r[last_i].x);
 
     i = last_i;
     while (i > 0) {
         i-=1;
-        if (!a[i].infinity) {
+        if (a[i].infinity == 0) {
             secp256k1_fe_mul(&mut r[last_i].x, &r[i].x, &u);
             secp256k1_fe_mul(&mut u, &u, &a[last_i].z);
             last_i = i;
         }
     }
-    VERIFY_CHECK(!a[last_i].infinity);
+    #[cfg(feature = "verify")] VERIFY_CHECK(!a[last_i].infinity);
     r[last_i].x = u;
 
     for i in 0..len {
-        if (!a[i].infinity) {
+        if (a[i].infinity == 0) {
             secp256k1_ge_set_gej_zinv(&mut r[i], &a[i], &r[i].x);
         }
     }
@@ -275,7 +275,7 @@ fn secp256k1_ge_table_set_globalz(len: usize, a: &mut [secp256k1_ge], zr: &[secp
 
     if (len > 0) {
         /* Ensure all y values are in weak normal form for fast negation of points */
-        secp256k1_fe_normalize_weak(&a[i].y);
+        secp256k1_fe_normalize_weak(&mut a[i].y);
         zs = zr[i];
 
         /* Work our way backwards, using the z-ratios to scale the x/y values. */
@@ -296,31 +296,31 @@ fn secp256k1_ge_table_set_globalz(len: usize, a: &mut [secp256k1_ge], zr: &[secp
 //static void secp256k1_gej_set_infinity(secp256k1_gej *r) {
 fn secp256k1_gej_set_infinity(r: &mut secp256k1_gej) {
     r.infinity = 1;
-    secp256k1_fe_clear(&r.x);
-    secp256k1_fe_clear(&r.y);
-    secp256k1_fe_clear(&r.z);
+    secp256k1_fe_clear(&mut r.x);
+    secp256k1_fe_clear(&mut r.y);
+    secp256k1_fe_clear(&mut r.z);
 }
 
 //static void secp256k1_ge_set_infinity(secp256k1_ge *r) {
 fn secp256k1_ge_set_infinity(r: &mut secp256k1_ge) {
     r.infinity = 1;
-    secp256k1_fe_clear(&r.x);
-    secp256k1_fe_clear(&r.y);
+    secp256k1_fe_clear(&mut r.x);
+    secp256k1_fe_clear(&mut r.y);
 }
 
 //static void secp256k1_gej_clear(secp256k1_gej *r) {
 pub fn secp256k1_gej_clear(r: &mut secp256k1_gej) {
     r.infinity = 0;
-    secp256k1_fe_clear(&r.x);
-    secp256k1_fe_clear(&r.y);
-    secp256k1_fe_clear(&r.z);
+    secp256k1_fe_clear(&mut r.x);
+    secp256k1_fe_clear(&mut r.y);
+    secp256k1_fe_clear(&mut r.z);
 }
 
 //static void secp256k1_ge_clear(secp256k1_ge *r) {
 pub fn secp256k1_ge_clear(r: &mut secp256k1_ge) {
     r.infinity = 0;
-    secp256k1_fe_clear(&r.x);
-    secp256k1_fe_clear(&r.y);
+    secp256k1_fe_clear(&mut r.x);
+    secp256k1_fe_clear(&mut r.y);
 }
 
 //static int secp256k1_ge_set_xo_var(secp256k1_ge *r, const secp256k1_fe *x, int odd) {
@@ -332,13 +332,13 @@ fn secp256k1_ge_set_xo_var(r: &mut secp256k1_ge, x: &secp256k1_fe, odd: i32) -> 
     secp256k1_fe_sqr(&mut x2, x);
     secp256k1_fe_mul(&mut x3, x, &x2);
     r.infinity = 0;
-    secp256k1_fe_add(&x3, &secp256k1_fe_const_b);
-    if (!secp256k1_fe_sqrt(&r.y, &x3)) {
+    secp256k1_fe_add(&mut x3, &secp256k1_fe_const_b);
+    if (!secp256k1_fe_sqrt(&mut r.y, &x3)) {
         return 0;
     }
-    secp256k1_fe_normalize_var(&r.y);
+    secp256k1_fe_normalize_var(&mut r.y);
     if (secp256k1_fe_is_odd(&r.y) != odd) {
-        secp256k1_fe_negate(&r.y, &r.y, 1);
+        secp256k1_fe_negate(&mut r.y, &r.y, 1);
     }
     return 1;
 }
@@ -348,7 +348,7 @@ pub fn secp256k1_gej_set_ge(r: &mut secp256k1_gej, a: &secp256k1_ge) {
    r.infinity = a.infinity;
    r.x = a.x;
    r.y = a.y;
-   secp256k1_fe_set_int(&r.z, 1);
+   secp256k1_fe_set_int(&mut r.z, 1);
 }
 
 //static int secp256k1_gej_eq_x_var(const secp256k1_fe *x, const secp256k1_gej *a) {
@@ -358,7 +358,7 @@ fn secp256k1_gej_eq_x_var(x: &secp256k1_fe, a: &secp256k1_gej) -> i32 {
     let mut r2: secp256k1_fe;
     //VERIFY_CHECK(!a.infinity);
     secp256k1_fe_sqr(&mut r, &a.z); secp256k1_fe_mul(&mut r, &r, x);
-    r2 = a.x; secp256k1_fe_normalize_weak(&r2);
+    r2 = a.x; secp256k1_fe_normalize_weak(&mut r2);
     return secp256k1_fe_equal_var(&r, &r2);
 }
 
@@ -368,8 +368,8 @@ pub fn secp256k1_gej_neg(r: &mut secp256k1_gej, a: &secp256k1_gej) {
     r.x = a.x;
     r.y = a.y;
     r.z = a.z;
-    secp256k1_fe_normalize_weak(&r.y);
-    secp256k1_fe_negate(&r.y, &r.y, 1);
+    secp256k1_fe_normalize_weak(&mut r.y);
+    secp256k1_fe_negate(&mut r.y, &r.y, 1);
 }
 
 //static int secp256k1_gej_is_infinity(const secp256k1_gej *a) {
@@ -382,14 +382,14 @@ fn secp256k1_ge_is_valid_var(a: &secp256k1_ge) -> i32 {
     //secp256k1_fe y2, x3;
     let y2: secp256k1_fe;
     let x3: secp256k1_fe;
-    if (a.infinity) {
+    if (a.infinity != 0) {
         return 0;
     }
     /* y^2 = x^3 + 7 */
     secp256k1_fe_sqr(&mut y2, &a.y);
     secp256k1_fe_sqr(&mut x3, &a.x); secp256k1_fe_mul(&mut x3, &x3, &a.x);
-    secp256k1_fe_add(&x3, &secp256k1_fe_const_b);
-    secp256k1_fe_normalize_weak(&x3);
+    secp256k1_fe_add(&mut x3, &secp256k1_fe_const_b);
+    secp256k1_fe_normalize_weak(&mut x3);
     return secp256k1_fe_equal_var(&y2, &x3);
 }
 

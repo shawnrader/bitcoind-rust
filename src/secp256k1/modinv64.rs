@@ -449,7 +449,7 @@ fn secp256k1_modinv64_update_fg_62_var(len: usize, f: &mut secp256k1_modinv64_si
 }
 
 /* Compute the inverse of x modulo modinfo->modulus, and replace x with it (constant time in x). */
-fn secp256k1_modinv64(x: &mut secp256k1_modinv64_signed62, modinfo: &secp256k1_modinv64_modinfo) {
+pub fn secp256k1_modinv64(x: &mut secp256k1_modinv64_signed62, modinfo: &secp256k1_modinv64_modinfo) {
     /* Start with d=0, e=1, f=modulus, g=x, zeta=-1. */
     let mut d: secp256k1_modinv64_signed62 = secp256k1_modinv64_signed62 { v: [0; 5] };
     let mut e: secp256k1_modinv64_signed62 = secp256k1_modinv64_signed62 { v: [1, 0, 0, 0, 0] };
@@ -500,7 +500,7 @@ fn secp256k1_modinv64(x: &mut secp256k1_modinv64_signed62, modinfo: &secp256k1_m
 }
 
 /* Compute the inverse of x modulo modinfo->modulus, and replace x with it (variable time). */
-fn secp256k1_modinv64_var(x: &mut secp256k1_modinv64_signed62, modinfo: &secp256k1_modinv64_modinfo) {
+pub fn secp256k1_modinv64_var(x: &mut secp256k1_modinv64_signed62, modinfo: &secp256k1_modinv64_modinfo) {
     /* Start with d=0, e=1, f=modulus, g=x, eta=-1. */
     let mut d: secp256k1_modinv64_signed62 = secp256k1_modinv64_signed62 { v: [0; 5] };
     let mut e: secp256k1_modinv64_signed62 = secp256k1_modinv64_signed62 { v: [1, 0, 0, 0, 0] };
