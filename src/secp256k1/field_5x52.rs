@@ -9,6 +9,7 @@
 //use super::SECP256K1_FLAGS_TYPE_COMPRESSION;
 
 use super::field_5x52_int128::{secp256k1_fe_mul_inner, secp256k1_fe_sqr_inner};
+use crate::secp256k1::modinv64::*;
 
 pub struct secp256k1_fe {
      /* X = sum(i=0..4, n[i]*2^(i*52)) mod p
@@ -204,7 +205,7 @@ fn secp256k1_fe_normalize(r: &mut secp256k1_fe) {
 }
  
 // static void secp256k1_fe_normalize_weak(secp256k1_fe *r) {
-fn secp256k1_fe_normalize_weak(r: &mut secp256k1_fe) {
+pub fn secp256k1_fe_normalize_weak(r: &mut secp256k1_fe) {
     // uint64_t t0 = r.n[0], t1 = r.n[1], t2 = r.n[2], t3 = r.n[3], t4 = r.n[4];
     let (mut t0, mut t1, mut t2, mut t3, mut t4) = (r.n[0], r.n[1], r.n[2], r.n[3], r.n[4]);
 
@@ -507,7 +508,7 @@ fn secp256k1_fe_get_b32(r: &[u8], a: &secp256k1_fe) {
 }
  
 // SECP256K1_INLINE static void secp256k1_fe_negate(secp256k1_fe *r, const secp256k1_fe *a, int m) {
-fn secp256k1_fe_negate(r: &mut secp256k1_fe, a: &secp256k1_fe, m: i32) {
+pub fn secp256k1_fe_negate(r: &mut secp256k1_fe, a: &secp256k1_fe, m: i32) {
     #[cfg(feature = "verify")] {
     VERIFY_CHECK(a.magnitude <= m);
     secp256k1_fe_verify(a);
@@ -762,14 +763,14 @@ fn secp256k1_fe_to_signed62(r: &mut secp256k1_modinv64_signed62, a: &secp256k1_f
 //     0x27C7F6E22DDACACFLL
 // };
 const secp256k1_const_modinfo_fe: secp256k1_modinv64_modinfo = secp256k1_modinv64_modinfo {
-    modulus: secp256k1_modinv64_modulus {
-        n: [-0x1000003D1, 0, 0, 0, 256]
+    modulus: secp256k1_modinv64_signed62 {
+        v: [-0x1000003D1, 0, 0, 0, 256]
     },
-    inv: 0x27C7F6E22DDACACF
+    modulus_inv62: 0x27C7F6E22DDACACF
 };
  
 // static void secp256k1_fe_inv(secp256k1_fe *r, const secp256k1_fe *x) {
-fn secp256k1_fe_inv(r: &mut secp256k1_fe, x: &secp256k1_fe) {
+pub fn secp256k1_fe_inv(r: &mut secp256k1_fe, x: &secp256k1_fe) {
     //secp256k1_fe tmp;
     let mut tmp: secp256k1_fe;
     // secp256k1_modinv64_signed62 s;

@@ -4,7 +4,7 @@
  * file COPYING or https://www.opensource.org/licenses/mit-license.php.*
  ***********************************************************************/
 
-use super::field_5x52::{secp256k1_fe, secp256k1_fe_storage, secp256k1_fe_sqr, secp256k1_fe_mul, SECP256K1_FE_CONST};
+use super::field_5x52::*;
 use crate::SECP256K1_FE_STORAGE_CONST_GET;
 use crate::SECP256K1_FE_STORAGE_CONST;
 
@@ -184,7 +184,7 @@ fn secp256k1_ge_set_xy(r: &mut secp256k1_ge, x: &secp256k1_fe, y: &secp256k1_fe)
 }
 
 fn secp256k1_ge_is_infinity(a: &secp256k1_ge) -> bool {
-    return a.infinity;
+    return a.infinity != 0;
 }
 
 fn secp256k1_ge_neg(r: &mut secp256k1_ge, a: &secp256k1_ge) {

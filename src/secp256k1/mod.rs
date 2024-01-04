@@ -13,6 +13,7 @@ pub mod group;
 pub mod hash;
 pub mod precomputed_ec_mult_gen;
 pub mod util;
+pub mod modinv64;
 
 /* Limbs of the secp256k1 order. */
 pub const SECP256K1_N_0: u64 = 0xBFD25E8CD0364141;
@@ -58,6 +59,9 @@ pub const SECP256K1_TAG_PUBKEY_ODD: u8 = 0x03;
 pub const SECP256K1_TAG_PUBKEY_UNCOMPRESSED: u8 = 0x04;
 pub const SECP256K1_TAG_PUBKEY_HYBRID_EVEN: u8 = 0x06;
 pub const SECP256K1_TAG_PUBKEY_HYBRID_ODD: u8 = 0x07;
+
+pub const secp256k1_scalar_one: secp256k1_scalar = SECP256K1_SCALAR_CONST(0, 0, 0, 0, 0, 0, 0, 1);
+pub const secp256k1_scalar_zero: secp256k1_scalar = SECP256K1_SCALAR_CONST(0, 0, 0, 0, 0, 0, 0, 0);
 
 /** Opaque data structure that holds a parsed and valid public key.
  *

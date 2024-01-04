@@ -10,7 +10,7 @@ use crate::secp256k1::field_5x52::*;
 use crate::secp256k1::hash::*;
 use crate::secp256k1::*;
 use crate::secp256k1::field_5x52::*;
-use crate::secp256k1::scalar_4X64::*;
+use crate::secp256k1::scalar_4x64::*;
 
 pub const ECMULT_GEN_PREC_BITS: i32 = 4;
 pub const ECMULT_WINDOW_SIZE: i32 = 15;
