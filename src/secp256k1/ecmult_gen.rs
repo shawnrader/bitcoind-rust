@@ -100,7 +100,7 @@ impl secp256k1_ecmult_gen_context {
         secp256k1_scalar_add(&mut gnb, gn, &ctx.blind);
         add.infinity = 0;
         for i in (0..n) {
-            n_i = secp256k1_scalar_get_bits(&gnb, i * bits, bits);
+            n_i = secp256k1_scalar_get_bits(&gnb, (i * bits) as u32, bits as u32).try_into().unwrap();
             for j in (0..g) {
                 /* This uses a conditional move to avoid any secret data in array indexes.
                  *   _Any_ use of secret indexes has been demonstrated to result in timing
@@ -113,7 +113,7 @@ impl secp256k1_ecmult_gen_context {
                  *    (https://www.tau.ac.il/~tromer/papers/cache.pdf)
                  */
                 unsafe {
-                    secp256k1_ge_storage_cmov(&mut adds, &secp256k1_ecmult_gen_prec_table[i][j], j == n_i);
+                    secp256k1_ge_storage_cmov(&mut adds, &secp256k1_ecmult_gen_prec_table[i as usize][j as usize], (j == n_i) as i32);
                 }
             }
             secp256k1_ge_from_storage(&mut add, &adds);
@@ -162,17 +162,17 @@ impl secp256k1_ecmult_gen_context {
         overflow |= secp256k1_fe_is_zero(&s);
         secp256k1_fe_cmov(&mut s, &secp256k1_fe_one, overflow);
         /* Randomize the projection to defend against multiplier sidechannels. */
-        secp256k1_gej_rescale(&ctx.initial, &s);
+        secp256k1_gej_rescale(&mut ctx.initial, &s);
         secp256k1_fe_clear(&mut s);
         secp256k1_rfc6979_hmac_sha256_generate(&rng, nonce32.as_mut_slice());
         let mut overflow:i32 = 0;
         secp256k1_scalar_set_b32(&mut b, &nonce32, &mut overflow);
         /* A blinding value of 0 works, but would undermine the projection hardening. */
-        secp256k1_scalar_cmov(&b, &secp256k1_scalar_one, secp256k1_scalar_is_zero(&b));
+        secp256k1_scalar_cmov(&mut b, &secp256k1_scalar_one, secp256k1_scalar_is_zero(&b) as i32);
         secp256k1_rfc6979_hmac_sha256_finalize(&mut rng);
         //memset(nonce32, 0, 32);
         nonce32 = [0; 32];
-        secp256k1_ecmult_gen(ctx, &gb, &b);
+        Self::secp256k1_ecmult_gen(ctx, &mut gb, &b);
         secp256k1_scalar_negate(&mut b, &b);
         ctx.blind = b;
         ctx.initial = gb;

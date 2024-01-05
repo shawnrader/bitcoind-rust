@@ -68,7 +68,7 @@ pub fn secp256k1_scalar_set_int(r: &mut secp256k1_scalar, v: u32) {
 // }
 pub fn secp256k1_scalar_get_bits(a: &secp256k1_scalar, offset: u32, count: u32) -> u32 {
     // VERIFY_CHECK((offset + count - 1) >> 6 == offset >> 6);
-    return (a.d[offset >> 6] >> (offset & 0x3F)) & (((1 as u64) << count) - 1);
+    (a.d[(offset >> 6) as usize] as u32 >> (offset & 0x3F)) & (((1 as u32) << count) - 1)
 }
 
 // SECP256K1_INLINE static unsigned int secp256k1_scalar_get_bits_var(const secp256k1_scalar *a, unsigned int offset, unsigned int count) {
@@ -89,7 +89,7 @@ pub fn secp256k1_scalar_get_bits_var(a: &secp256k1_scalar, offset: u32, count: u
         return secp256k1_scalar_get_bits(a, offset, count);
     } else {
         // VERIFY_CHECK((offset >> 6) + 1 < 4);
-        return ((a.d[offset >> 6] >> (offset & 0x3F)) | (a.d[(offset >> 6) + 1] << (64 - (offset & 0x3F)))) & (((1 as u64) << count) - 1);
+        return ((a.d[offset as usize >> 6] as u32 >> (offset & 0x3F)) | ((a.d[(offset as usize >> 6) + 1] as u32) << (64 - (offset & 0x3F)))) & (((1 as u32) << count) - 1);
     }
 }
 
@@ -168,7 +168,7 @@ pub fn secp256k1_scalar_add(r: &mut secp256k1_scalar, a: &secp256k1_scalar, b: &
     r.d[2] = (t & 0xFFFFFFFFFFFFFFFF) as u64; t >>= 64;
     t += (a.d[3] as u128) + (b.d[3] as u128);
     r.d[3] = (t & 0xFFFFFFFFFFFFFFFF) as u64; t >>= 64;
-    overflow = (t + secp256k1_scalar_check_overflow(r)) as i32;
+    overflow = (t + secp256k1_scalar_check_overflow(r) as u128) as i32;
     // VERIFY_CHECK(overflow == 0 || overflow == 1);
     secp256k1_scalar_reduce(r, overflow);
     return overflow;
@@ -191,17 +191,17 @@ pub fn secp256k1_scalar_add(r: &mut secp256k1_scalar, a: &secp256k1_scalar, b: &
 //     VERIFY_CHECK(secp256k1_scalar_check_overflow(r) == 0);
 // #endif
 // }
-pub fn secp256k1_scalar_cadd_bit(r: &mut secp256k1_scalar, bit: u32, flag: i32) {
+pub fn secp256k1_scalar_cadd_bit(r: &mut secp256k1_scalar, mut bit: u32, flag: i32) {
     let mut t: u128;
     // VERIFY_CHECK(bit < 256);
     bit += ((flag - 1) & 0x100) as u32;  /* forcing (bit >> 6) > 3 makes this a noop */
-    t = (r.d[0] as u128) + (((((bit >> 6) == 0) as u64)) << (bit & 0x3F));
+    t = (r.d[0] as u128) + (((((bit >> 6) == 0) as u64)) << (bit & 0x3F)) as u128;
     r.d[0] = (t & 0xFFFFFFFFFFFFFFFF) as u64; t >>= 64;
-    t += (r.d[1] as u128) + (((((bit >> 6) == 1) as u64)) << (bit & 0x3F));
+    t += (r.d[1] as u128) + (((((bit >> 6) == 1) as u64)) << (bit & 0x3F)) as u128;
     r.d[1] = (t & 0xFFFFFFFFFFFFFFFF) as u64; t >>= 64;
-    t += (r.d[2] as u128) + (((((bit >> 6) == 2) as u64)) << (bit & 0x3F));
+    t += (r.d[2] as u128) + (((((bit >> 6) == 2) as u64)) << (bit & 0x3F)) as u128;
     r.d[2] = (t & 0xFFFFFFFFFFFFFFFF) as u64; t >>= 64;
-    t += (r.d[3] as u128) + (((((bit >> 6) == 3) as u64)) << (bit & 0x3F));
+    t += (r.d[3] as u128) + (((((bit >> 6) == 3) as u64)) << (bit & 0x3F)) as u128;
     r.d[3] = (t & 0xFFFFFFFFFFFFFFFF) as u64;
     // #ifdef VERIFY
     // VERIFY_CHECK((t >> 64) == 0);

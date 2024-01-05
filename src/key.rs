@@ -83,7 +83,7 @@ fn ec_seckey_import_der(ctx: &secp256k1_context, out32: &mut [u8; 32], mut secke
     }
     //memcpy(out32 + (32 - oslen), seckey, oslen);
     out32[32 - oslen..].copy_from_slice(&seckey[..oslen]);
-    if !secp256k1_ec_seckey_verify(ctx, out32) {
+    if secp256k1_ec_seckey_verify(ctx, out32) == 0 {
         //memset(out32, 0, 32);
         *out32 = [0u8; 32];
         return false;
@@ -207,7 +207,7 @@ impl CKey {
     }
 
     pub fn Check(&self, vch: &[u8; 32]) -> bool {
-        secp256k1_ec_seckey_verify(&self.secp256k1_context_sign, vch)
+        secp256k1_ec_seckey_verify(&self.secp256k1_context_sign, vch) != 0
     }
 
     pub fn MakeNewKey(&mut self, fCompressedIn: bool) {

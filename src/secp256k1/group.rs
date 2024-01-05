@@ -816,7 +816,7 @@ pub fn secp256k1_gej_add_ge(r: &mut secp256k1_gej, a: &secp256k1_gej, b: &secp25
 }
 
 //static void secp256k1_gej_rescale(secp256k1_gej *r, const secp256k1_fe *s) {
-fn sec256k1_gej_rescale(r: &mut secp256k1_gej, s: &secp256k1_fe) {
+pub fn secp256k1_gej_rescale(r: &mut secp256k1_gej, s: &secp256k1_fe) {
     /* Operations: 4 mul, 1 sqr */
     //secp256k1_fe zz;
     let mut zz: secp256k1_fe;
