@@ -221,14 +221,14 @@ pub fn secp256k1_scalar_cadd_bit(r: &mut secp256k1_scalar, mut bit: u32, flag: i
 //         *overflow = over;
 //     }
 // }
-fn secp256k1_scalar_set_b32 (r: &mut secp256k1_scalar, b32: &u8, overflow: &i32) {
+fn secp256k1_scalar_set_b32 (r: &mut secp256k1_scalar, b32: &[u8], overflow: &i32) {
     let mut over: i32;
     r.d[0] = (b32[31] as u64) | (b32[30] as u64) << 8 | (b32[29] as u64) << 16 | (b32[28] as u64) << 24 | (b32[27] as u64) << 32 | (b32[26] as u64) << 40 | (b32[25] as u64) << 48 | (b32[24] as u64) << 56;
     r.d[1] = (b32[23] as u64) | (b32[22] as u64) << 8 | (b32[21] as u64) << 16 | (b32[20] as u64) << 24 | (b32[19] as u64) << 32 | (b32[18] as u64) << 40 | (b32[17] as u64) << 48 | (b32[16] as u64) << 56;
     r.d[2] = (b32[15] as u64) | (b32[14] as u64) << 8 | (b32[13] as u64) << 16 | (b32[12] as u64) << 24 | (b32[11] as u64) << 32 | (b32[10] as u64) << 40 | (b32[9] as u64) << 48 | (b32[8] as u64) << 56;
     r.d[3] = (b32[7] as u64) | (b32[6] as u64) << 8 | (b32[5] as u64) << 16 | (b32[4] as u64) << 24 | (b32[3] as u64) << 32 | (b32[2] as u64) << 40 | (b32[1] as u64) << 48 | (b32[0] as u64) << 56;
     over = secp256k1_scalar_reduce(r, secp256k1_scalar_check_overflow(r));
-    if (overflow) {
+    if *overflow != 0 {
         *overflow = over;
     }
 }
@@ -239,7 +239,7 @@ fn secp256k1_scalar_set_b32 (r: &mut secp256k1_scalar, b32: &u8, overflow: &i32)
 //     bin[16] = a->d[1] >> 56; bin[17] = a->d[1] >> 48; bin[18] = a->d[1] >> 40; bin[19] = a->d[1] >> 32; bin[20] = a->d[1] >> 24; bin[21] = a->d[1] >> 16; bin[22] = a->d[1] >> 8; bin[23] = a->d[1];
 //     bin[24] = a->d[0] >> 56; bin[25] = a->d[0] >> 48; bin[26] = a->d[0] >> 40; bin[27] = a->d[0] >> 32; bin[28] = a->d[0] >> 24; bin[29] = a->d[0] >> 16; bin[30] = a->d[0] >> 8; bin[31] = a->d[0];
 // }
-fn secp256k1_scalar_get_b32(bin: &u8, a: &mut secp256k1_scalar) {
+fn secp256k1_scalar_get_b32(bin: &[u8], a: &mut secp256k1_scalar) {
     bin[0] = (a.d[3] >> 56) as u8; bin[1] = (a.d[3] >> 48) as u8; bin[2] = (a.d[3] >> 40) as u8; bin[3] = (a.d[3] >> 32) as u8; bin[4] = (a.d[3] >> 24) as u8; bin[5] = (a.d[3] >> 16) as u8; bin[6] = (a.d[3] >> 8) as u8; bin[7] = a.d[3] as u8;
     bin[8] = (a.d[2] >> 56) as u8; bin[9] = (a.d[2] >> 48) as u8; bin[10] = (a.d[2] >> 40) as u8; bin[11] = (a.d[2] >> 32) as u8; bin[12] = (a.d[2] >> 24) as u8; bin[13] = (a.d[2] >> 16) as u8; bin[14] = (a.d[2] >> 8) as u8; bin[15] = a.d[2] as u8;
     bin[16] = (a.d[1] >> 56) as u8; bin[17] = (a.d[1] >> 48) as u8; bin[18] = (a.d[1] >> 40) as u8; bin[19] = (a.d[1] >> 32) as u8; bin[20] = (a.d[1] >> 24) as u8; bin[21] = (a.d[1] >> 16) as u8; bin[22] = (a.d[1] >> 8) as u8; bin[23] = a.d[1] as u8;
@@ -251,7 +251,7 @@ fn secp256k1_scalar_get_b32(bin: &u8, a: &mut secp256k1_scalar) {
 //     return (a->d[0] | a->d[1] | a->d[2] | a->d[3]) == 0;
 // }
 fn secp256k1_scalar_is_zero(a: &secp256k1_scalar) -> i32 {
-    return (a.d[0] | a.d[1] | a.d[2] | a.d[3]) == 0;
+    ((a.d[0] | a.d[1] | a.d[2] | a.d[3]) == 0) as i32
 }
 
 // static void secp256k1_scalar_negate(secp256k1_scalar *r, const secp256k1_scalar *a) {
@@ -281,7 +281,7 @@ pub fn secp256k1_scalar_negate(r: &mut secp256k1_scalar, a: &secp256k1_scalar) {
 //     return ((a->d[0] ^ 1) | a->d[1] | a->d[2] | a->d[3]) == 0;
 // }
 fn secp256k1_scalar_is_one(a: &secp256k1_scalar) -> i32 {
-    return ((a.d[0] ^ 1) | a.d[1] | a.d[2] | a.d[3]) == 0;
+    (((a.d[0] ^ 1) | a.d[1] | a.d[2] | a.d[3]) == 0) as i32
 }
 
 // static int secp256k1_scalar_is_high(const secp256k1_scalar *a) {
@@ -323,21 +323,20 @@ fn secp256k1_scalar_is_high(a: &secp256k1_scalar) -> i32 {
 //     r->d[3] = t & nonzero;
 //     return 2 * (mask == 0) - 1;
 // }
-fn secp256k1_scalar_cond_negate(r: &mut secp256k1_scalar, flag: i32) {
+fn secp256k1_scalar_cond_negate(r: &mut secp256k1_scalar, flag: i32) -> i32 {
     /* If we are flag = 0, mask = 00...00 and this is a no-op;
      * if we are flag = 1, mask = 11...11 and this is identical to secp256k1_scalar_negate */
-    let mut mask = (!flag) - 1;
-    let mut nonzero = (secp256k1_scalar_is_zero(r) != 0) as u64 - 1;
-    let mut t = (r.d[0] ^ mask) + ((SECP256K1_N_0 + 1) & mask);
-    r.d[0] = t & nonzero; t >>= 64;
-    t += (r.d[1] ^ mask) + (SECP256K1_N_1 & mask);
-    r.d[1] = t & nonzero; t >>= 64;
-    t += (r.d[2] ^ mask) + (SECP256K1_N_2 & mask);
-    r.d[2] = t & nonzero; t >>= 64;
-    t += (r.d[3] ^ mask) + (SECP256K1_N_3 & mask);
-    r.d[3] = t & nonzero;
-    return 2 * (mask == 0) - 1;
-
+    let mut mask: u64 = !flag as u64 - 1;
+    let mut nonzero: u64 = (secp256k1_scalar_is_zero(r) != 0) as u64 - 1;
+    let mut t: u128 = ((r.d[0] as u128) ^ mask as u128) + ((SECP256K1_N_0 as u128 + 1) & mask as u128);
+    r.d[0] = t as u64 & nonzero; t >>= 64;
+    t += (r.d[1] ^ mask) as u128 + (SECP256K1_N_1 & mask) as u128;
+    r.d[1] = t as u64 & nonzero; t >>= 64;
+    t += (r.d[2] ^ mask) as u128 + (SECP256K1_N_2 & mask) as u128;
+    r.d[2] = t as u64 & nonzero; t >>= 64;
+    t += (r.d[3] ^ mask) as u128 + (SECP256K1_N_3 & mask) as u128;
+    r.d[3] = t as u64 & nonzero;
+    2 * (mask == 0) as i32 - 1
 }
 
 
