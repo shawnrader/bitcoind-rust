@@ -12,7 +12,7 @@ use crate::secp256k1::*;
 use crate::secp256k1::field_5x52::*;
 use crate::secp256k1::scalar_4x64::*;
 
-pub const ECMULT_GEN_PREC_BITS: i32 = 4;
+pub const ECMULT_GEN_PREC_BITS: i32 = 2;
 pub const ECMULT_WINDOW_SIZE: i32 = 15;
 
 pub const secp256k1_fe_one: secp256k1_fe = SECP256K1_FE_CONST(0, 0, 0, 0, 0, 0, 0, 1);
