@@ -56,7 +56,7 @@ pub fn secp256k1_scalar_clear(r: &mut secp256k1_scalar) {
 //     r->d[3] = 0;
 // }
 pub fn secp256k1_scalar_set_int(r: &mut secp256k1_scalar, v: u32) {
-    r.d[0] = v;
+    r.d[0] = v as u64;
     r.d[1] = 0;
     r.d[2] = 0;
     r.d[3] = 0;

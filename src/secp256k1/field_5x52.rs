@@ -15,7 +15,7 @@ pub struct secp256k1_fe {
      /* X = sum(i=0..4, n[i]*2^(i*52)) mod p
       * where p = 2^256 - 0x1000003D1
       */
-    n : [u64; 5],
+    pub n : [u64; 5],
 
 #[cfg(feature = "verify")]
     magnitude: i32,
@@ -64,28 +64,28 @@ pub struct secp256k1_fe_storage {
     pub n: [u64; 4],
 }
  
-// pub fn SECP256K1_FE_STORAGE_CONST(d7: u64, d6: u64, d5: u64, d4: u64, d3: u64, d2: u64, d1: u64, d0: u64) -> secp256k1_fe_storage {
-//     secp256k1_fe_storage {
-//         n : [(d0) | ((d1 as u64) << 32),
-//              (d2) | ((d3 as u64) << 32),
-//              (d4) | ((d5 as u64) << 32),
-//              (d6) | ((d7 as u64) << 32),
-//         ]
-//     }
-// }
-
-#[macro_export] 
-macro_rules! SECP256K1_FE_STORAGE_CONST {
-    ($d0:expr, $d1:expr, $d2:expr, $d3:expr, $d4:expr, $d5:expr, $d6:expr, $d7:expr) => {
-        secp256k1_fe_storage {
-            n : [($d0) | (($d1 as u64) << 32),
-                 ($d2) | (($d3 as u64) << 32),
-                 ($d4) | (($d5 as u64) << 32),
-                 ($d6) | (($d7 as u64) << 32),
-            ]
-        }
+pub fn SECP256K1_FE_STORAGE_CONST(d7: u64, d6: u64, d5: u64, d4: u64, d3: u64, d2: u64, d1: u64, d0: u64) -> secp256k1_fe_storage {
+    secp256k1_fe_storage {
+        n : [(d0) | ((d1 as u64) << 32),
+             (d2) | ((d3 as u64) << 32),
+             (d4) | ((d5 as u64) << 32),
+             (d6) | ((d7 as u64) << 32),
+        ]
     }
 }
+
+// #[macro_export] 
+// macro_rules! SECP256K1_FE_STORAGE_CONST {
+//     ($d0:expr, $d1:expr, $d2:expr, $d3:expr, $d4:expr, $d5:expr, $d6:expr, $d7:expr) => {
+//         secp256k1_fe_storage {
+//             n : [($d0) | (($d1 as u64) << 32),
+//                  ($d2) | (($d3 as u64) << 32),
+//                  ($d4) | (($d5 as u64) << 32),
+//                  ($d6) | (($d7 as u64) << 32),
+//             ]
+//         }
+//     }
+// }
 
 
 #[macro_export] 
@@ -155,7 +155,7 @@ fn secp256k1_fe_get_bounds(r: &mut secp256k1_fe, m: i32) {
 }
  
 //static void secp256k1_fe_normalize(secp256k1_fe *r) {
-fn secp256k1_fe_normalize(r: &mut secp256k1_fe) {
+pub fn secp256k1_fe_normalize(r: &mut secp256k1_fe) {
     //uint64_t t0 = r.n[0], t1 = r.n[1], t2 = r.n[2], t3 = r.n[3], t4 = r.n[4];
     let mut t0 = r.n[0];
     let mut t1 = r.n[1];
@@ -279,7 +279,7 @@ pub fn secp256k1_fe_normalize_var(r: &mut secp256k1_fe) {
 
 
 // static int secp256k1_fe_normalizes_to_zero(const secp256k1_fe *r) {
-fn secp256k1_fe_normalizes_to_zero(r: &secp256k1_fe) -> bool {
+pub fn secp256k1_fe_normalizes_to_zero(r: &secp256k1_fe) -> i32 {
     let (mut t0, mut t1, mut t2, mut t3, mut t4) = (r.n[0], r.n[1], r.n[2], r.n[3], r.n[4]);
  
     /* z0 tracks a possible raw value of 0, z1 tracks a possible raw value of P */
@@ -300,11 +300,11 @@ fn secp256k1_fe_normalizes_to_zero(r: &secp256k1_fe) -> bool {
     /* ... except for a possible carry at bit 48 of t4 (i.e. bit 256 of the field element) */
     //VERIFY_CHECK(t4 >> 49 == 0);
  
-    return (z0 == 0) | (z1 == 0xFFFFFFFFFFFFF_u64);
+    return ((z0 == 0) | (z1 == 0xFFFFFFFFFFFFF_u64)) as i32;
  }
  
 // static int secp256k1_fe_normalizes_to_zero_var(const secp256k1_fe *r) {
-fn secp256k1_fe_normalizes_to_zero_var(r: &secp256k1_fe) -> bool {
+pub fn secp256k1_fe_normalizes_to_zero_var(r: &secp256k1_fe) -> bool {
     let mut t0: u64;
     let mut t1: u64;
     let mut t2: u64;
@@ -677,7 +677,7 @@ pub fn secp256k1_fe_half(r: &mut secp256k1_fe) {
 }
  
 // static SECP256K1_INLINE void secp256k1_fe_storage_cmov(secp256k1_fe_storage *r, const secp256k1_fe_storage *a, int flag) {
-fn secp256k1_fe_storage_cmov(r: &mut secp256k1_fe_storage, a: &secp256k1_fe_storage, flag: i32) {
+pub fn secp256k1_fe_storage_cmov(r: &mut secp256k1_fe_storage, a: &secp256k1_fe_storage, flag: i32) {
     let mut mask0: u64;
     let mut mask1: u64;
     #[cfg(feature = "verify")] VG_CHECK_VERIFY(r.n, sizeof(r.n));
@@ -689,7 +689,7 @@ fn secp256k1_fe_storage_cmov(r: &mut secp256k1_fe_storage, a: &secp256k1_fe_stor
     r.n[3] = (r.n[3] & mask0) | (a.n[3] & mask1);
 }
 
-fn secp256k1_fe_to_storage(r: &mut secp256k1_fe_storage, a: &secp256k1_fe) {
+pub fn secp256k1_fe_to_storage(r: &mut secp256k1_fe_storage, a: &secp256k1_fe) {
     #[cfg(feature = "verify")] {
         VERIFY_CHECK(a.normalized);
     }
@@ -700,7 +700,7 @@ fn secp256k1_fe_to_storage(r: &mut secp256k1_fe_storage, a: &secp256k1_fe) {
  }
  
 // static SECP256K1_INLINE void secp256k1_fe_from_storage(secp256k1_fe *r, const secp256k1_fe_storage *a) {
-fn secp256k1_fe_from_storage(r: &mut secp256k1_fe, a: &secp256k1_fe_storage) {
+pub fn secp256k1_fe_from_storage(r: &mut secp256k1_fe, a: &secp256k1_fe_storage) {
     r.n[0] = a.n[0] & 0xFFFFFFFFFFFFF_u64;
     r.n[1] = a.n[0] >> 52 | ((a.n[1] << 12) & 0xFFFFFFFFFFFFF_u64);
     r.n[2] = a.n[1] >> 40 | ((a.n[2] << 24) & 0xFFFFFFFFFFFFF_u64);

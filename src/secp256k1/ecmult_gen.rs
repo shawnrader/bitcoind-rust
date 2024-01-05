@@ -97,7 +97,7 @@ impl secp256k1_ecmult_gen_context {
         let mut add: secp256k1_ge = secp256k1_ge::new();
         *r = ctx.initial;
         /* Blind scalar/point multiplication by computing (n-b)G + bG instead of nG. */
-        secp256k1_scalar_add(&gnb, gn, &ctx.blind);
+        secp256k1_scalar_add(&mut gnb, gn, &ctx.blind);
         add.infinity = 0;
         for i in (0..n) {
             n_i = secp256k1_scalar_get_bits(&gnb, i * bits, bits);
@@ -173,7 +173,7 @@ impl secp256k1_ecmult_gen_context {
         //memset(nonce32, 0, 32);
         nonce32 = [0; 32];
         secp256k1_ecmult_gen(ctx, &gb, &b);
-        secp256k1_scalar_negate(&b, &b);
+        secp256k1_scalar_negate(&mut b, &b);
         ctx.blind = b;
         ctx.initial = gb;
         secp256k1_scalar_clear(&mut b);

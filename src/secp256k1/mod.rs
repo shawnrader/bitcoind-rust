@@ -3,9 +3,8 @@
  * Distributed under the MIT software license, see the accompanying    *
  * file COPYING or https://www.opensource.org/licenses/mit-license.php.*
  ***********************************************************************/
-use ecmult_gen::secp256k1_ecmult_gen_context;
-
 pub mod ecmult_gen;
+pub mod field;
 pub mod field_5x52;
 pub mod field_5x52_int128;
 pub mod scalar_4x64;
@@ -14,6 +13,11 @@ pub mod hash;
 pub mod precomputed_ec_mult_gen;
 pub mod util;
 pub mod modinv64;
+
+use ecmult_gen::*;
+use group::*;
+use scalar_4x64::*;
+use hash::*;
 
 /* Limbs of the secp256k1 order. */
 pub const SECP256K1_N_0: u64 = 0xBFD25E8CD0364141;
@@ -78,13 +82,6 @@ pub struct secp256k1_pubkey {
 
 pub fn secp256k1_scalar_clear(r: &mut secp256k1_scalar) {
     r.d[0] = 0;
-    r.d[1] = 0;
-    r.d[2] = 0;
-    r.d[3] = 0;
-}
-
-pub fn secp256k1_scalar_set_int(r: &mut secp256k1_scalar, v: u32) {
-    r.d[0] = v as u64;
     r.d[1] = 0;
     r.d[2] = 0;
     r.d[3] = 0;
@@ -174,13 +171,13 @@ fn secp256k1_scalar_is_zero(a: &secp256k1_scalar) -> bool {
 }
 
 
-fn secp256k1_scalar_set_b32_seckey(r: &mut secp256k1_scalar, bin: &[u8; 32]) -> bool {
+fn secp256k1_scalar_set_b32_seckey(r: &mut secp256k1_scalar, bin: &[u8; 32]) -> i32 {
     let mut overflow: i32 = 0;
     secp256k1_scalar_set_b32(r, bin, &mut overflow);
-    return (overflow == 0) & !secp256k1_scalar_is_zero(r);
+    return ((overflow == 0) & !secp256k1_scalar_is_zero(r)) as i32;
 }
 
-pub fn secp256k1_ec_seckey_verify(ctx: &secp256k1_context, seckey: &[u8; 32]) -> bool {
+pub fn secp256k1_ec_seckey_verify(ctx: &secp256k1_context, seckey: &[u8; 32]) -> i32 {
     let mut sec: secp256k1_scalar = secp256k1_scalar{ d: [0; 4] };
 
     let ret = secp256k1_scalar_set_b32_seckey(&mut sec, seckey);
@@ -365,7 +362,8 @@ pub fn secp256k1_ec_pubkey_tweak_mul(ctx: &secp256k1_context, pubkey: &mut secp2
 
     secp256k1_scalar_set_b32(&mut factor, tweak32, &mut overflow);
     ret = !overflow && secp256k1_pubkey_load(ctx, &p, pubkey);
-    memset(pubkey, 0, sizeof(*pubkey));
+    //memset(pubkey, 0, sizeof(*pubkey));
+    pubkey.data.fill(0);
     if (ret) {
         if (secp256k1_eckey_pubkey_tweak_mul(&p, &factor)) {
             secp256k1_pubkey_save(pubkey, &p);
@@ -391,16 +389,17 @@ pub fn secp256k1_ec_pubkey_combine(ctx: &secp256k1_context, pubnonce: &mut secp2
     let mut Qj: secp256k1_gej;
     let Q: secp256k1_ge;
 
-    memset(pubnonce, 0, sizeof(*pubnonce));
-    ARG_CHECK(n >= 1);
-    ARG_CHECK(pubnonces != NULL);
+    //memset(pubnonce, 0, sizeof(*pubnonce));
+    pubnonce.data.fill(0);
+    //ARG_CHECK(n >= 1);
+    //ARG_CHECK(pubnonces != NULL);
 
-    secp256k1_gej_set_infinity(&Qj);
+    secp256k1_gej_set_infinity(&mut Qj);
 
     for i in 0..n {
-        ARG_CHECK(pubnonces[i] != NULL);
+        //ARG_CHECK(pubnonces[i] != NULL);
         secp256k1_pubkey_load(ctx, &Q, pubnonces[i]);
-        secp256k1_gej_add_ge(&Qj, &Qj, &Q);
+        secp256k1_gej_add_ge(&mut Qj, &Qj, &Q);
     }
     if (secp256k1_gej_is_infinity(&Qj)) {
         return 0;
@@ -413,10 +412,6 @@ pub fn secp256k1_ec_pubkey_combine(ctx: &secp256k1_context, pubnonce: &mut secp2
 //int secp256k1_tagged_sha256(const secp256k1_context* ctx, unsigned char *hash32, const unsigned char *tag, size_t taglen, const unsigned char *msg, size_t msglen) {
 pub fn secp256k1_tagged_sha256(ctx: &secp256k1_context, hash32: &mut [u8; 32], tag: &[u8], taglen: usize, msg: &[u8], msglen: usize) -> i32 {
     let mut sha: secp256k1_sha256;
-    VERIFY_CHECK(ctx != NULL);
-    ARG_CHECK(hash32 != NULL);
-    ARG_CHECK(tag != NULL);
-    ARG_CHECK(msg != NULL);
 
     secp256k1_sha256_initialize_tagged(&sha, tag, taglen);
     secp256k1_sha256_write(&sha, msg, msglen);
