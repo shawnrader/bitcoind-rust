@@ -10,7 +10,7 @@ pub fn secp256k1_fe_equal(a: &secp256k1_fe, b: &secp256k1_fe) -> i32 {
 }
 
 //SECP256K1_INLINE static int secp256k1_fe_equal_var(const secp256k1_fe *a, const secp256k1_fe *b) {
-pub fn secp256k1_fe_equal_var(a: &secp256k1_fe, b: &secp256k1_fe) -> bool {
+pub fn secp256k1_fe_equal_var(a: &secp256k1_fe, b: &secp256k1_fe) -> i32 {
     let mut na = secp256k1_fe { n: [0; 5] };
     secp256k1_fe_negate(&mut na, a, 1);
     secp256k1_fe_add(&mut na, b);

@@ -202,7 +202,7 @@ fn Transform(s: &mut [u32], mut chunk: &[u8], mut blocks: usize)
         w13 += sigma1(w11) + w6 + sigma0(w14);
         Round(d, e, f, &mut g, h, a, b, &mut c, 0xd5a79147_u32 + w13);
         w14 += sigma1(w12) + w7 + sigma0(w15);
-        Round(c, d, e, &mut f, g, h, a, &mut b, 0x06ca6351_u32 + w14);
+        (c, d, e, &mut f, g, h, a, &mut b, 0x06ca6351_u32 + w14);
         w15 += sigma1(w13) + w8 + sigma0(w0);
         Round(b, c, d, &mut e, f, g, h, &mut a, 0x14292967_u32 + w15);
         

@@ -304,7 +304,7 @@ pub fn secp256k1_fe_normalizes_to_zero(r: &secp256k1_fe) -> i32 {
  }
  
 // static int secp256k1_fe_normalizes_to_zero_var(const secp256k1_fe *r) {
-pub fn secp256k1_fe_normalizes_to_zero_var(r: &secp256k1_fe) -> bool {
+pub fn secp256k1_fe_normalizes_to_zero_var(r: &secp256k1_fe) -> i32 {
     let mut t0: u64;
     let mut t1: u64;
     let mut t2: u64;
@@ -329,7 +329,7 @@ pub fn secp256k1_fe_normalizes_to_zero_var(r: &secp256k1_fe) -> bool {
  
     /* Fast return path should catch the majority of cases */
     if ((z0 != 0_u64) & (z1 != 0xFFFFFFFFFFFFF_u64)) {
-        return false;
+        return 0;
     }
  
     t1 = r.n[1];
@@ -347,7 +347,7 @@ pub fn secp256k1_fe_normalizes_to_zero_var(r: &secp256k1_fe) -> bool {
     /* ... except for a possible carry at bit 48 of t4 (i.e. bit 256 of the field element) */
     //VERIFY_CHECK(t4 >> 49 == 0);
  
-    return (z0 == 0) | (z1 == 0xFFFFFFFFFFFFF_u64);
+    return ((z0 == 0) | (z1 == 0xFFFFFFFFFFFFF_u64)) as i32;
 }
  
 pub fn secp256k1_fe_set_int(r: &mut secp256k1_fe, a: i32) {

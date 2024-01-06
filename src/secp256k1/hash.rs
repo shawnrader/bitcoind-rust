@@ -5,6 +5,7 @@
  ***********************************************************************/
 
  use crate::secp256k1::util::*;
+ use wrapping_arithmetic::wrappit;
 
 // typedef struct {
 //      uint32_t s[8];
@@ -102,13 +103,22 @@ macro_rules! sigma1 {
 //     (d) += t1; \
 //     (h) = t1 + t2; \
 // } while(0)
-macro_rules! Round {
-    ($a:expr, $b:expr, $c:expr, $d:expr, $e:expr, $f:expr, $g:expr, $h:expr, $k:expr, $w:expr) => {
-        let t1 = ($h) + Sigma1!($e) + Ch!($e, $f, $g) + ($k) + ($w);
-        let t2 = Sigma0!($a) + Maj!($a, $b, $c);
-        ($d) += t1;
-        ($h) = t1 + t2;
-    };
+// macro_rules! Round {
+//     ($a:expr, $b:expr, $c:expr, $d:expr, $e:expr, $f:expr, $g:expr, $h:expr, $k:expr, $w:expr) => {
+//         let t1 = ($h) + Sigma1!($e) + Ch!($e, $f, $g) + ($k) + ($w);
+//         let t2 = Sigma0!($a) + Maj!($a, $b, $c);
+//         ($d) += t1;
+//         ($h) = t1 + t2;
+//     };
+// }
+
+#[wrappit]
+fn Round(a: u32, b: u32, c: u32, d: &mut u32, e: u32, f: u32, g: u32, h: &mut u32, k: u32, w: u32)
+{
+    let t1: u32 = h + Sigma1!(e) + Ch!(e, f, g) + k + w;
+    let t2: u32 = Sigma0!(a) + Maj!(a, b, c);
+    *d = d + t1;
+    *h = t1 + t2;
 }
 
 // static void secp256k1_sha256_initialize(secp256k1_sha256 *hash) {
@@ -139,76 +149,138 @@ pub fn secp256k1_sha256_initialize( hash: &mut secp256k1_sha256) {
 //static void secp256k1_sha256_transform(uint32_t* s, const unsigned char* buf) {
 pub fn secp256k1_sha256_transform(s: &mut [u32; 8], buf: &[u8; 64]) {
 
-    let a = s[0]; let b = s[1]; let c = s[2]; let d = s[3]; let e = s[4]; let f = s[5]; let g = s[6]; let h = s[7];
+    let mut a = s[0]; let mut b = s[1]; let mut c = s[2]; let mut d = s[3]; let mut e = s[4]; let mut f = s[5]; let mut g = s[6]; let mut h = s[7];
     let (mut w0, mut w1, mut w2, mut w3, mut w4, mut w5, mut w6, mut w7, mut w8, mut w9, mut w10, mut w11, mut w12, mut w13, mut w14, mut w15); (0u32, 0u32, 0u32, 0u32, 0u32, 0u32, 0u32, 0u32, 0u32, 0u32, 0u32, 0u32, 0u32, 0u32, 0u32, 0u32,);
 
-    Round!(a, b, c, d, e, f, g, h, 0x428a2f98,  w0 = secp256k1_read_be32(&buf[0..3]));
-    Round!(h, a, b, c, d, e, f, g, 0x71374491,  w1 = secp256k1_read_be32(&buf[4..7]));
-    Round!(g, h, a, b, c, d, e, f, 0xb5c0fbcf,  w2 = secp256k1_read_be32(&buf[8..11]));
-    Round!(f, g, h, a, b, c, d, e, 0xe9b5dba5,  w3 = secp256k1_read_be32(&buf[12..15]));
-    Round!(e, f, g, h, a, b, c, d, 0x3956c25b,  w4 = secp256k1_read_be32(&buf[16..19]));
-    Round!(d, e, f, g, h, a, b, c, 0x59f111f1,  w5 = secp256k1_read_be32(&buf[20..23]));
-    Round!(c, d, e, f, g, h, a, b, 0x923f82a4,  w6 = secp256k1_read_be32(&buf[24..27]));
-    Round!(b, c, d, e, f, g, h, a, 0xab1c5ed5,  w7 = secp256k1_read_be32(&buf[28..31]));
-    Round!(a, b, c, d, e, f, g, h, 0xd807aa98,  w8 = secp256k1_read_be32(&buf[32..35]));
-    Round!(h, a, b, c, d, e, f, g, 0x12835b01,  w9 = secp256k1_read_be32(&buf[36..39]));
-    Round!(g, h, a, b, c, d, e, f, 0x243185be, w10 = secp256k1_read_be32(&buf[40..43]));
-    Round!(f, g, h, a, b, c, d, e, 0x550c7dc3, w11 = secp256k1_read_be32(&buf[44..47]));
-    Round!(e, f, g, h, a, b, c, d, 0x72be5d74, w12 = secp256k1_read_be32(&buf[48..51]));
-    Round!(d, e, f, g, h, a, b, c, 0x80deb1fe, w13 = secp256k1_read_be32(&buf[52..55]));
-    Round!(c, d, e, f, g, h, a, b, 0x9bdc06a7, w14 = secp256k1_read_be32(&buf[56..59]));
-    Round!(b, c, d, e, f, g, h, a, 0xc19bf174, w15 = secp256k1_read_be32(&buf[60..63]));
+    w0 = secp256k1_read_be32(&buf[0..3]);
+    Round(a, b, c, &mut d, e, f, g, &mut h, 0x428a2f98,  w0);
+    w1 = secp256k1_read_be32(&buf[4..7]);
+    Round(h, a, b, &mut c, d, e, f, &mut g, 0x71374491,  w1);
+    w2 = secp256k1_read_be32(&buf[8..11]);
+    Round(g, h, a, &mut b, c, d, e, &mut f, 0xb5c0fbcf,  w2);
+    w3 = secp256k1_read_be32(&buf[12..15]);
+    Round(f, g, h, &mut a, b, c, d, &mut e, 0xe9b5dba5,  w3);
+    w4 = secp256k1_read_be32(&buf[16..19]);
+    Round(e, f, g, &mut h, a, b, c, &mut d, 0x3956c25b,  w4);
+    w5 = secp256k1_read_be32(&buf[20..23]);
+    Round(d, e, f, &mut g, h, a, b, &mut c, 0x59f111f1,  w5);
+    w6 = secp256k1_read_be32(&buf[24..27]);
+    Round(c, d, e, &mut f, g, h, a, &mut b, 0x923f82a4,  w6);
+    w7 = secp256k1_read_be32(&buf[28..31]);
+    Round(b, c, d, &mut e, f, g, h, &mut a, 0xab1c5ed5,  w7);
+    w8 = secp256k1_read_be32(&buf[32..35]);
+    Round(a, b, c, &mut d, e, f, g, &mut h, 0xd807aa98,  w8);
+    w9 = secp256k1_read_be32(&buf[36..39]);
+    Round(h, a, b, &mut c, d, e, f, &mut g, 0x12835b01,  w9);
+    w10 = secp256k1_read_be32(&buf[40..43]);;
+    Round(g, h, a, &mut b, c, d, e, &mut f, 0x243185be, w10);
+    w11 = secp256k1_read_be32(&buf[44..47]);
+    Round(f, g, h, &mut a, b, c, d, &mut e, 0x550c7dc3, w11);
+    w12 = secp256k1_read_be32(&buf[48..51]);
+    Round(e, f, g, &mut h, a, b, c, &mut d, 0x72be5d74, w12);
+    w13 = secp256k1_read_be32(&buf[52..55]);
+    Round(d, e, f, &mut g, h, a, b, &mut c, 0x80deb1fe, w13);
+    w14 = secp256k1_read_be32(&buf[56..59]);
+    Round(c, d, e, &mut f, g, h, a, &mut b, 0x9bdc06a7, w14);
+    w15 = secp256k1_read_be32(&buf[60..63]);
+    Round(b, c, d, &mut e, f, g, h, &mut a, 0xc19bf174, w15);
 
-    Round!(a, b, c, d, e, f, g, h, 0xe49b69c1, w0 += sigma1!(w14) + w9 + sigma0!(w1));
-    Round!(h, a, b, c, d, e, f, g, 0xefbe4786, w1 += sigma1!(w15) + w10 + sigma0!(w2));
-    Round!(g, h, a, b, c, d, e, f, 0x0fc19dc6, w2 += sigma1!(w0) + w11 + sigma0!(w3));
-    Round!(f, g, h, a, b, c, d, e, 0x240ca1cc, w3 += sigma1!(w1) + w12 + sigma0!(w4));
-    Round!(e, f, g, h, a, b, c, d, 0x2de92c6f, w4 += sigma1!(w2) + w13 + sigma0!(w5));
-    Round!(d, e, f, g, h, a, b, c, 0x4a7484aa, w5 += sigma1!(w3) + w14 + sigma0!(w6));
-    Round!(c, d, e, f, g, h, a, b, 0x5cb0a9dc, w6 += sigma1!(w4) + w15 + sigma0!(w7));
-    Round!(b, c, d, e, f, g, h, a, 0x76f988da, w7 += sigma1!(w5) + w0 + sigma0!(w8));
-    Round!(a, b, c, d, e, f, g, h, 0x983e5152, w8 += sigma1!(w6) + w1 + sigma0!(w9));
-    Round!(h, a, b, c, d, e, f, g, 0xa831c66d, w9 += sigma1!(w7) + w2 + sigma0!(w10));
-    Round!(g, h, a, b, c, d, e, f, 0xb00327c8, w10 += sigma1!(w8) + w3 + sigma0!(w11));
-    Round!(f, g, h, a, b, c, d, e, 0xbf597fc7, w11 += sigma1!(w9) + w4 + sigma0!(w12));
-    Round!(e, f, g, h, a, b, c, d, 0xc6e00bf3, w12 += sigma1!(w10) + w5 + sigma0!(w13));
-    Round!(d, e, f, g, h, a, b, c, 0xd5a79147, w13 += sigma1!(w11) + w6 + sigma0!(w14));
-    Round!(c, d, e, f, g, h, a, b, 0x06ca6351, w14 += sigma1!(w12) + w7 + sigma0!(w15));
-    Round!(b, c, d, e, f, g, h, a, 0x14292967, w15 += sigma1!(w13) + w8 + sigma0!(w0));
+    w0 += sigma1!(w14) + w9 + sigma0!(w1);
+    Round(a, b, c, &mut d, e, f, g, &mut h, 0xe49b69c1, w0);
+    w1 += sigma1!(w15) + w10 + sigma0!(w2);
+    Round(h, a, b, &mut c, d, e, f, &mut g, 0xefbe4786, w1);
+    w2 += sigma1!(w0) + w11 + sigma0!(w3);
+    Round(g, h, a, &mut b, c, d, e, &mut f, 0x0fc19dc6, w2);
+    w3 += sigma1!(w1) + w12 + sigma0!(w4);
+    Round(f, g, h, &mut a, b, c, d, &mut e, 0x240ca1cc, w3);
+    w4 += sigma1!(w2) + w13 + sigma0!(w5);
+    Round(e, f, g, &mut h, a, b, c, &mut d, 0x2de92c6f, w4);
+    w5 += sigma1!(w3) + w14 + sigma0!(w6);
+    Round(d, e, f, &mut g, h, a, b, &mut c, 0x4a7484aa, w5);
+    w6 += sigma1!(w4) + w15 + sigma0!(w7);
+    Round(c, d, e, &mut f, g, h, a, &mut b, 0x5cb0a9dc, w6);
+    w7 += sigma1!(w5) + w0 + sigma0!(w8);
+    Round(b, c, d, &mut e, f, g, h, &mut a, 0x76f988da, w7);
+    w8 += sigma1!(w6) + w1 + sigma0!(w9);
+    Round(a, b, c, &mut d, e, f, g, &mut h, 0x983e5152, w8);
+    w9 += sigma1!(w7) + w2 + sigma0!(w10);
+    Round(h, a, b, &mut c, d, e, f, &mut g, 0xa831c66d, w9);
+    w10 += sigma1!(w8) + w3 + sigma0!(w11);
+    Round(g, h, a, &mut b, c, d, e, &mut f, 0xb00327c8, w10);
+    w11 += sigma1!(w9) + w4 + sigma0!(w12);
+    Round(f, g, h, &mut a, b, c, d, &mut e, 0xbf597fc7, w11);
+    w12 += sigma1!(w10) + w5 + sigma0!(w13);
+    Round(e, f, g, &mut h, a, b, c, &mut d, 0xc6e00bf3, w12);
+    w13 += sigma1!(w11) + w6 + sigma0!(w14);
+    Round(d, e, f, &mut g, h, a, b, &mut c, 0xd5a79147, w13);
+    w14 += sigma1!(w12) + w7 + sigma0!(w15);
+    Round(c, d, e, &mut f, g, h, a, &mut b, 0x06ca6351, w14);
+    w15 += sigma1!(w13) + w8 + sigma0!(w0);
+    Round(b, c, d, &mut e, f, g, h, &mut a, 0x14292967, w15);
 
-    Round!(a, b, c, d, e, f, g, h, 0x27b70a85, w0 += sigma1!(w14) + w9 + sigma0!(w1));
-    Round!(h, a, b, c, d, e, f, g, 0x2e1b2138, w1 += sigma1!(w15) + w10 + sigma0!(w2));
-    Round!(g, h, a, b, c, d, e, f, 0x4d2c6dfc, w2 += sigma1!(w0) + w11 + sigma0!(w3));
-    Round!(f, g, h, a, b, c, d, e, 0x53380d13, w3 += sigma1!(w1) + w12 + sigma0!(w4));
-    Round!(e, f, g, h, a, b, c, d, 0x650a7354, w4 += sigma1!(w2) + w13 + sigma0!(w5));
-    Round!(d, e, f, g, h, a, b, c, 0x766a0abb, w5 += sigma1!(w3) + w14 + sigma0!(w6));
-    Round!(c, d, e, f, g, h, a, b, 0x81c2c92e, w6 += sigma1!(w4) + w15 + sigma0!(w7));
-    Round!(b, c, d, e, f, g, h, a, 0x92722c85, w7 += sigma1!(w5) + w0 + sigma0!(w8));
-    Round!(a, b, c, d, e, f, g, h, 0xa2bfe8a1, w8 += sigma1!(w6) + w1 + sigma0!(w9));
-    Round!(h, a, b, c, d, e, f, g, 0xa81a664b, w9 += sigma1!(w7) + w2 + sigma0!(w10));
-    Round!(g, h, a, b, c, d, e, f, 0xc24b8b70, w10 += sigma1!(w8) + w3 + sigma0!(w11));
-    Round!(f, g, h, a, b, c, d, e, 0xc76c51a3, w11 += sigma1!(w9) + w4 + sigma0!(w12));
-    Round!(e, f, g, h, a, b, c, d, 0xd192e819, w12 += sigma1!(w10) + w5 + sigma0!(w13));
-    Round!(d, e, f, g, h, a, b, c, 0xd6990624, w13 += sigma1!(w11) + w6 + sigma0!(w14));
-    Round!(c, d, e, f, g, h, a, b, 0xf40e3585, w14 += sigma1!(w12) + w7 + sigma0!(w15));
-    Round!(b, c, d, e, f, g, h, a, 0x106aa070, w15 += sigma1!(w13) + w8 + sigma0!(w0));
+    w0 += sigma1!(w14) + w9 + sigma0!(w1);
+    Round(a, b, c, &mut d, e, f, g, &mut h, 0x27b70a85, w0);
+    w1 += sigma1!(w15) + w10 + sigma0!(w2);
+    Round(h, a, b, &mut c, d, e, f, &mut g, 0x2e1b2138, w1);
+    w2 += sigma1!(w0) + w11 + sigma0!(w3);
+    Round(g, h, a, &mut b, c, d, e, &mut f, 0x4d2c6dfc, w2);
+    w3 += sigma1!(w1) + w12 + sigma0!(w4);
+    Round(f, g, h, &mut a, b, c, d, &mut e, 0x53380d13, w3);
+    w4 += sigma1!(w2) + w13 + sigma0!(w5);
+    Round(e, f, g, &mut h, a, b, c, &mut d, 0x650a7354, w4);
+    w5 += sigma1!(w3) + w14 + sigma0!(w6);
+    Round(d, e, f, &mut g, h, a, b, &mut c, 0x766a0abb, w5);
+    w6 += sigma1!(w4) + w15 + sigma0!(w7);
+    Round(c, d, e, &mut f, g, h, a, &mut b, 0x81c2c92e, w6);
+    w7 += sigma1!(w5) + w0 + sigma0!(w8);
+    Round(b, c, d, &mut e, f, g, h, &mut a, 0x92722c85, w7);
+    w8 += sigma1!(w6) + w1 + sigma0!(w9);
+    Round(a, b, c, &mut d, e, f, g, &mut h, 0xa2bfe8a1, w8);
+    w9 += sigma1!(w7) + w2 + sigma0!(w10);
+    Round(h, a, b, &mut c, d, e, f, &mut g, 0xa81a664b, w9);
+    w10 += sigma1!(w8) + w3 + sigma0!(w11);
+    Round(g, h, a, &mut b, c, d, e, &mut f, 0xc24b8b70, w10);
+    w11 += sigma1!(w9) + w4 + sigma0!(w12);
+    Round(f, g, h, &mut a, b, c, d, &mut e, 0xc76c51a3, w11);
+    w12 += sigma1!(w10) + w5 + sigma0!(w13);
+    Round(e, f, g, &mut h, a, b, c, &mut d, 0xd192e819, w12);
+    w13 += sigma1!(w11) + w6 + sigma0!(w14);
+    Round(d, e, f, &mut g, h, a, b, &mut c, 0xd6990624, w13);
+    w14 += sigma1!(w12) + w7 + sigma0!(w15);
+    Round(c, d, e, &mut f, g, h, a, &mut b, 0xf40e3585, w14);
+    w15 += sigma1!(w13) + w8 + sigma0!(w0);
+    Round(b, c, d, &mut e, f, g, h, &mut a, 0x106aa070, w15);
 
-    Round!(a, b, c, d, e, f, g, h, 0x19a4c116, w0 += sigma1!(w14) + w9 + sigma0!(w1));
-    Round!(h, a, b, c, d, e, f, g, 0x1e376c08, w1 += sigma1!(w15) + w10 + sigma0!(w2));
-    Round!(g, h, a, b, c, d, e, f, 0x2748774c, w2 += sigma1!(w0) + w11 + sigma0!(w3));
-    Round!(f, g, h, a, b, c, d, e, 0x34b0bcb5, w3 += sigma1!(w1) + w12 + sigma0!(w4));
-    Round!(e, f, g, h, a, b, c, d, 0x391c0cb3, w4 += sigma1!(w2) + w13 + sigma0!(w5));
-    Round!(d, e, f, g, h, a, b, c, 0x4ed8aa4a, w5 += sigma1!(w3) + w14 + sigma0!(w6));
-    Round!(c, d, e, f, g, h, a, b, 0x5b9cca4f, w6 += sigma1!(w4) + w15 + sigma0!(w7));
-    Round!(b, c, d, e, f, g, h, a, 0x682e6ff3, w7 += sigma1!(w5) + w0 + sigma0!(w8));
-    Round!(a, b, c, d, e, f, g, h, 0x748f82ee, w8 += sigma1!(w6) + w1 + sigma0!(w9));
-    Round!(h, a, b, c, d, e, f, g, 0x78a5636f, w9 += sigma1!(w7) + w2 + sigma0!(w10));
-    Round!(g, h, a, b, c, d, e, f, 0x84c87814, w10 += sigma1!(w8) + w3 + sigma0!(w11));
-    Round!(f, g, h, a, b, c, d, e, 0x8cc70208, w11 += sigma1!(w9) + w4 + sigma0!(w12));
-    Round!(e, f, g, h, a, b, c, d, 0x90befffa, w12 += sigma1!(w10) + w5 + sigma0!(w13));
-    Round!(d, e, f, g, h, a, b, c, 0xa4506ceb, w13 += sigma1!(w11) + w6 + sigma0!(w14));
-    Round!(c, d, e, f, g, h, a, b, 0xbef9a3f7, w14 + sigma1!(w12) + w7 + sigma0!(w15));
-    Round!(b, c, d, e, f, g, h, a, 0xc67178f2, w15 + sigma1!(w13) + w8 + sigma0!(w0));
+    w0 += sigma1!(w14) + w9 + sigma0!(w1);
+    Round(a, b, c, &mut d, e, f, g, &mut h, 0x19a4c116, w0);
+    w1 += sigma1!(w15) + w10 + sigma0!(w2);
+    Round(h, a, b, &mut c, d, e, f, &mut g, 0x1e376c08, w1);
+    w2 += sigma1!(w0) + w11 + sigma0!(w3);
+    Round(g, h, a, &mut b, c, d, e, &mut f, 0x2748774c, w2);
+    w3 += sigma1!(w1) + w12 + sigma0!(w4);
+    Round(f, g, h, &mut a, b, c, d, &mut e, 0x34b0bcb5, w3);
+    w4 += sigma1!(w2) + w13 + sigma0!(w5);
+    Round(e, f, g, &mut h, a, b, c, &mut d, 0x391c0cb3, w4);
+    w5 += sigma1!(w3) + w14 + sigma0!(w6);
+    Round(d, e, f, &mut g, h, a, b, &mut c, 0x4ed8aa4a, w5);
+    w6 += sigma1!(w4) + w15 + sigma0!(w7);
+    Round(c, d, e, &mut f, g, h, a, &mut b, 0x5b9cca4f, w6);
+    w7 += sigma1!(w5) + w0 + sigma0!(w8);
+    Round(b, c, d, &mut e, f, g, h, &mut a, 0x682e6ff3, w7);
+    w8 += sigma1!(w6) + w1 + sigma0!(w9);
+    Round(a, b, c, &mut d, e, f, g, &mut h, 0x748f82ee, w8);
+    w9 += sigma1!(w7) + w2 + sigma0!(w10);
+    Round(h, a, b, &mut c, d, e, f, &mut g, 0x78a5636f, w9);
+    w10 += sigma1!(w8) + w3 + sigma0!(w11);
+    Round(g, h, a, &mut b, c, d, e, &mut f, 0x84c87814, w10);
+    w11 += sigma1!(w9) + w4 + sigma0!(w12);
+    Round(f, g, h, &mut a, b, c, d, &mut e, 0x8cc70208, w11);
+    w12 += sigma1!(w10) + w5 + sigma0!(w13);
+    Round(e, f, g, &mut h, a, b, c, &mut d, 0x90befffa, w12);
+    w13 += sigma1!(w11) + w6 + sigma0!(w14);
+    Round(d, e, f, &mut g, h, a, b, &mut c, 0xa4506ceb, w13);
+    Round(c, d, e, &mut f, g, h, a, &mut b, 0xbef9a3f7, w14 + sigma1!(w12) + w7 + sigma0!(w15));
+    Round(b, c, d, &mut e, f, g, h, &mut a, 0xc67178f2, w15 + sigma1!(w13) + w8 + sigma0!(w0));
 
     s[0] += a;
     s[1] += b;
