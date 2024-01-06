@@ -17,13 +17,14 @@ use std::arch::asm;
 
 fn GetPerformanceCounter() -> u64 {
     let (low, high): (u32, u32);
-    unsafe {
+    #[cfg(target_arch = "x86_64")] unsafe {
         asm!(
             "rdtsc",
             out("eax") low,
             out("edx") high,
         );
     }
+    #[cfg(target_arch = "aarch64")] todo!();
     ((high as u64) << 32) | (low as u64)
 }
 
@@ -60,7 +61,7 @@ fn GetRdRand() -> u64 {
 
     // RdRand may very rarely fail. Invoke it up to 10 times in a loop to reduce this risk.
     for i in 0..10 {
-        unsafe {
+        #[cfg(target_arch = "x86_64")] unsafe {
             asm!(
             "rdrand rax",
             "setc cl",
@@ -68,8 +69,8 @@ fn GetRdRand() -> u64 {
             out("cl") ok,
             options(nostack, preserves_flags),
         ); // rdseed %rax
-
         }
+        #[cfg(target_arch = "aarch64")] todo!();
         if ok != 0 {
             break;
         }
@@ -86,7 +87,7 @@ fn GetRdSeed() -> u64 {
     let mut r1: u64 = 0;
 
     loop {
-        unsafe {
+        #[cfg(target_arch = "x86_64")] unsafe {
             asm!(
             "rdseed rax",
             "setc cl",
@@ -94,8 +95,8 @@ fn GetRdSeed() -> u64 {
             out("cl") ok,
             options(nostack, preserves_flags),
         ); // rdseed %rax
-
         }
+        #[cfg(target_arch = "aarch64")] todo!();
         if ok != 0 {
             break;
         }
