@@ -18,6 +18,7 @@ use ecmult_gen::*;
 use group::*;
 use scalar_4x64::*;
 use hash::*;
+use field_5x52::*;
 
 /* Limbs of the secp256k1 order. */
 pub const SECP256K1_N_0: u64 = 0xBFD25E8CD0364141;
@@ -185,17 +186,83 @@ pub fn secp256k1_ec_seckey_verify(ctx: &secp256k1_context, seckey: &[u8; 32]) ->
     return ret;
 }
 
+// static int secp256k1_pubkey_load(const secp256k1_context* ctx, secp256k1_ge* ge, const secp256k1_pubkey* pubkey) {
+//     if (sizeof(secp256k1_ge_storage) == 64) {
+//         /* When the secp256k1_ge_storage type is exactly 64 byte, use its
+//          * representation inside secp256k1_pubkey, as conversion is very fast.
+//          * Note that secp256k1_pubkey_save must use the same representation. */
+//         secp256k1_ge_storage s;
+//         memcpy(&s, &pubkey->data[0], sizeof(s));
+//         secp256k1_ge_from_storage(ge, &s);
+//     } else {
+//         /* Otherwise, fall back to 32-byte big endian for X and Y. */
+//         secp256k1_fe x, y;
+//         secp256k1_fe_set_b32(&x, pubkey->data);
+//         secp256k1_fe_set_b32(&y, pubkey->data + 32);
+//         secp256k1_ge_set_xy(ge, &x, &y);
+//     }
+//     ARG_CHECK(!secp256k1_fe_is_zero(&ge->x));
+//     return 1;
+// }
+fn secp256k1_pubkey_load(ctx: &secp256k1_context, ge: &mut secp256k1_ge, pubkey: &secp256k1_pubkey) {
+    if std::mem::size_of::<secp256k1_ge_storage>() == 64 {
+        /* When the secp256k1_ge_storage type is exactly 64 byte, use its
+         * representation inside secp256k1_pubkey, as conversion is very fast.
+         * Note that secp256k1_pubkey_save must use the same representation. */
+        let mut s: secp256k1_ge_storage;
+        //memcpy(&s, &pubkey.data[0], std::mem::size_of::<secp256k1_ge_storage>());
+        s.x.copy_from_u8slice(pubkey.data.as_slice());
+        secp256k1_ge_from_storage(ge, &s);
+    } else {
+        /* Otherwise, fall back to 32-byte big endian for X and Y. */
+        let mut x: secp256k1_fe;
+        let mut y: secp256k1_fe;
+        secp256k1_fe_set_b32(&mut x, &pubkey.data);
+        secp256k1_fe_set_b32(&mut y, &pubkey.data[32..]);
+        secp256k1_ge_set_xy(ge, &x, &y);
+    }
+}
+
+// static void secp256k1_pubkey_save(secp256k1_pubkey* pubkey, secp256k1_ge* ge) {
+//     if (sizeof(secp256k1_ge_storage) == 64) {
+//         secp256k1_ge_storage s;
+//         secp256k1_ge_to_storage(&s, ge);
+//         memcpy(&pubkey->data[0], &s, sizeof(s));
+//     } else {
+//         VERIFY_CHECK(!secp256k1_ge_is_infinity(ge));
+//         secp256k1_fe_normalize_var(&ge->x);
+//         secp256k1_fe_normalize_var(&ge->y);
+//         secp256k1_fe_get_b32(pubkey->data, &ge->x);
+//         secp256k1_fe_get_b32(pubkey->data + 32, &ge->y);
+//     }
+// }
+
+fn secp256k1_pubkey_save(pubkey: &mut secp256k1_pubkey, ge: &secp256k1_ge) {
+    if std::mem::size_of::<secp256k1_ge_storage>() == 64 {
+        let mut s: secp256k1_ge_storage;
+        secp256k1_ge_to_storage(&mut s, ge);
+        //memcpy(&pubkey.data[0], &s, std::mem::size_of::<secp256k1_ge_storage>());
+        pubkey.data.copy_from_slice(&s);
+    } else {
+       // VERIFY_CHECK(!secp256k1_ge_is_infinity(ge));
+        secp256k1_fe_normalize_var(&mut ge.x);
+        secp256k1_fe_normalize_var(&mut ge.y);
+        secp256k1_fe_get_b32(&mut pubkey.data, &ge.x);
+        secp256k1_fe_get_b32(&mut pubkey.data[32..], &ge.y);
+    }
+}
+
 //static int secp256k1_ec_pubkey_create_helper(const secp256k1_ecmult_gen_context *ecmult_gen_ctx, secp256k1_scalar *seckey_scalar, secp256k1_ge *p, const unsigned char *seckey) 
-pub fn secp256k1_ec_pubkey_create_helper(ecmult_gen_ctx: &secp256k1_ecmult_gen_context, seckey_scalar: &mut secp256k1_scalar, p: &secp256k1_ge, seckey: &[u8; 32]) -> bool {
+pub fn secp256k1_ec_pubkey_create_helper(ecmult_gen_ctx: &secp256k1_ecmult_gen_context, seckey_scalar: &mut secp256k1_scalar, p: &mut secp256k1_ge, seckey: &[u8; 32]) -> bool {
 
     let mut pj: secp256k1_gej;
 
     let ret = secp256k1_scalar_set_b32_seckey(seckey_scalar, seckey);
     secp256k1_scalar_cmov(seckey_scalar, &secp256k1_scalar_one, !ret);
 
-    secp256k1_ecmult_gen(ecmult_gen_ctx, &pj, seckey_scalar);
+    secp256k1_ecmult_gen_context::secp256k1_ecmult_gen(ecmult_gen_ctx, &mut pj, seckey_scalar);
     secp256k1_ge_set_gej(p, &pj);
-    return ret;
+    return ret != 0;
 }
 
 //int secp256k1_ec_pubkey_create(const secp256k1_context* ctx, secp256k1_pubkey *pubkey, const unsigned char *seckey) 
@@ -209,7 +276,7 @@ pub fn secp256k1_ec_pubkey_create(ctx: &secp256k1_context, pubkey: &mut secp256k
 
     let ret = secp256k1_ec_pubkey_create_helper(&ctx.ecmult_gen_ctx, &mut seckey_scalar, &p, seckey);
     secp256k1_pubkey_save(pubkey, &p);
-    secp256k1_memczero(pubkey, sizeof(*pubkey), !ret);
+    secp256k1_memczero(pubkey, pubkey.data.len(), !ret);
 
     secp256k1_scalar_clear(&mut seckey_scalar);
     return ret;

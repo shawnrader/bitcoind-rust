@@ -63,6 +63,39 @@ pub fn SECP256K1_FE_CONST(d7: u32, d6: u32, d5: u32, d4: u32, d3: u32, d2: u32, 
 pub struct secp256k1_fe_storage {
     pub n: [u64; 4],
 }
+
+impl secp256k1_fe_storage {
+    pub fn copy_from_u8slice(&mut self, slice: &[u8]) {
+        self.n[0] = slice[0] as u64
+            | ((slice[1] as u64) << 8)
+            | ((slice[2] as u64) << 16)
+            | ((slice[3] as u64) << 24)
+            | ((slice[4] as u64) << 32)
+            | ((slice[5] as u64) << 40)
+            | (((slice[6] as u64) & 0xF)  << 48);
+        self.n[1] = (((slice[6] as u64) >> 4) & 0xF)
+            | ((slice[7] as u64) << 4)
+            | ((slice[8] as u64) << 12)
+            | ((slice[9] as u64) << 20)
+            | ((slice[10] as u64) << 28)
+            | ((slice[11] as u64) << 36)
+            | ((slice[12] as u64) << 44);
+        self.n[2] = slice[13] as u64
+            | ((slice[14] as u64) << 8)
+            | ((slice[15] as u64) << 16)
+            | ((slice[16] as u64) << 24)
+            | ((slice[17] as u64) << 32)
+            | ((slice[18] as u64) << 40)
+            | (((slice[19] as u64) & 0xF) << 48);
+        self.n[3] = (((slice[19] as u64) >> 4) & 0xF)
+            | ((slice[20] as u64) << 4)
+            | ((slice[21] as u64) << 12)
+            | ((slice[22] as u64) << 20)
+            | ((slice[23] as u64) << 28)
+            | ((slice[24] as u64) << 36)
+            | ((slice[25] as u64) << 44);
+    }
+}
  
 pub fn SECP256K1_FE_STORAGE_CONST(d7: u64, d6: u64, d5: u64, d4: u64, d3: u64, d2: u64, d1: u64, d0: u64) -> secp256k1_fe_storage {
     secp256k1_fe_storage {
@@ -467,7 +500,7 @@ pub fn secp256k1_fe_set_b32(r: &mut secp256k1_fe, a: &[u8]) -> i32 {
  }
  
  /** Convert a field element to a 32-byte big endian value. Requires the input to be normalized */
-fn secp256k1_fe_get_b32(r: &[u8], a: &secp256k1_fe) {
+pub fn secp256k1_fe_get_b32(r: &[u8], a: &secp256k1_fe) {
 
 #[cfg(feature = "verify")] {
      VERIFY_CHECK(a.normalized);

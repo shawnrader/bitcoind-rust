@@ -427,7 +427,7 @@ pub fn secp256k1_hmac_sha256_initialize(hash: &mut secp256k1_hmac_sha256, key: &
         rkey[0..key.len()].copy_from_slice(key);
         rkey[key.len()..64].copy_from_slice(&[0u8; 64][key.len()..64]);
     } else {
-        let mut sha256 = secp256k1_sha256::new();
+        let mut sha256 = secp256k1_sha256 { s: [0; 8], buf: [0; 64], bytes: 0};
         secp256k1_sha256_initialize(&mut sha256);
         secp256k1_sha256_write(&mut sha256, key);
         let mut hash_final = [0u8; 32];

@@ -178,7 +178,7 @@ fn secp256k1_ge_set_gej_zinv(r: &mut secp256k1_ge, a: &secp256k1_gej, zi: &secp2
 }
 
 //static void secp256k1_ge_set_xy(secp256k1_ge *r, const secp256k1_fe *x, const secp256k1_fe *y) {
-fn secp256k1_ge_set_xy(r: &mut secp256k1_ge, x: &secp256k1_fe, y: &secp256k1_fe) {
+pub fn secp256k1_ge_set_xy(r: &mut secp256k1_ge, x: &secp256k1_fe, y: &secp256k1_fe) {
     r.infinity = 0;
     r.x = *x;
     r.y = *y;
@@ -829,7 +829,7 @@ pub fn secp256k1_gej_rescale(r: &mut secp256k1_gej, s: &secp256k1_fe) {
 }
 
 //static void secp256k1_ge_to_storage(secp256k1_ge_storage *r, const secp256k1_ge *a) {
-fn secp256k1_ge_to_storage(r: &mut secp256k1_ge_storage, a: &secp256k1_ge) {
+pub fn secp256k1_ge_to_storage(r: &mut secp256k1_ge_storage, a: &secp256k1_ge) {
     //secp256k1_fe x, y;
     let mut x: secp256k1_fe;
     let mut y: secp256k1_fe;
