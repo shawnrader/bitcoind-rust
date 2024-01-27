@@ -83,6 +83,15 @@ pub struct secp256k1_ge_storage {
     pub y: secp256k1_fe_storage,
 }
 
+impl secp256k1_ge_storage {
+    pub fn to_array(self) -> [u8; 64] {
+        let mut ret = [0u8; 64];
+        ret[..32].copy_from_slice(&self.x.to_slice());
+        ret[32..].copy_from_slice(&self.y.to_slice());
+        ret
+    }
+}
+
 #[macro_export]
 macro_rules! SECP256K1_GE_STORAGE_CONST {
     ($a:expr, $b:expr, $c:expr, $d:expr, $e:expr, $f:expr, $g:expr, $h:expr, $i:expr, $j:expr, $k:expr, $l:expr, $m:expr, $n:expr, $o:expr, $p:expr) => {

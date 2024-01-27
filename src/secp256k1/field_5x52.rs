@@ -72,28 +72,69 @@ impl secp256k1_fe_storage {
             | ((slice[3] as u64) << 24)
             | ((slice[4] as u64) << 32)
             | ((slice[5] as u64) << 40)
-            | (((slice[6] as u64) & 0xF)  << 48);
-        self.n[1] = (((slice[6] as u64) >> 4) & 0xF)
-            | ((slice[7] as u64) << 4)
-            | ((slice[8] as u64) << 12)
-            | ((slice[9] as u64) << 20)
-            | ((slice[10] as u64) << 28)
-            | ((slice[11] as u64) << 36)
-            | ((slice[12] as u64) << 44);
-        self.n[2] = slice[13] as u64
-            | ((slice[14] as u64) << 8)
-            | ((slice[15] as u64) << 16)
-            | ((slice[16] as u64) << 24)
-            | ((slice[17] as u64) << 32)
-            | ((slice[18] as u64) << 40)
-            | (((slice[19] as u64) & 0xF) << 48);
-        self.n[3] = (((slice[19] as u64) >> 4) & 0xF)
-            | ((slice[20] as u64) << 4)
-            | ((slice[21] as u64) << 12)
-            | ((slice[22] as u64) << 20)
-            | ((slice[23] as u64) << 28)
-            | ((slice[24] as u64) << 36)
-            | ((slice[25] as u64) << 44);
+            | ((slice[6] as u64) << 48)
+            | ((slice[7]) as u64) << 56;
+        self.n[1] = slice[8] as u64
+            | ((slice[9] as u64) << 8)
+            | ((slice[10] as u64) << 16)
+            | ((slice[11] as u64) << 24)
+            | ((slice[12] as u64) << 32)
+            | ((slice[13] as u64) << 40)
+            | ((slice[14] as u64) << 48)
+            | ((slice[15] as u64) << 56);
+        self.n[2] = slice[16] as u64
+            | ((slice[17] as u64) << 8)
+            | ((slice[18] as u64) << 16)
+            | ((slice[19] as u64) << 24)
+            | ((slice[20] as u64) << 32)
+            | ((slice[21] as u64) << 40)
+            | ((slice[22] as u64) << 48)
+            | ((slice[23] as u64) << 56);
+        self.n[3] = slice[24] as u64
+            | ((slice[25] as u64) << 8)
+            | ((slice[26] as u64) << 16)
+            | ((slice[27] as u64) << 24)
+            | ((slice[28] as u64) << 32)
+            | ((slice[29] as u64) << 40)
+            | ((slice[30] as u64) << 48)
+            | ((slice[31] as u64) << 56);
+    }
+
+    pub fn to_slice(self) -> [u8; 32] {
+        let mut r = [0u8; 32];
+        r[0] = self.n[0] as u8 & 0xFF;
+        r[1] = (self.n[0] >> 8) as u8 & 0xFF;
+        r[2] = (self.n[0] >> 16) as u8 & 0xFF;
+        r[3] = (self.n[0] >> 24) as u8 & 0xFF;
+        r[4] = (self.n[0] >> 32) as u8 & 0xFF;
+        r[5] = (self.n[0] >> 40) as u8 & 0xFF;
+        r[6] = (self.n[0] >> 48) as u8 & 0xFF;
+        r[7] = (self.n[0] >> 56) as u8 & 0xFF;
+        r[8] = self.n[1] as u8 & 0xFF;
+        r[9] = (self.n[1] >> 8) as u8 & 0xFF;
+        r[10] = (self.n[1] >> 16) as u8 & 0xFF;
+        r[11] = (self.n[1] >> 24) as u8 & 0xFF;
+        r[12] = (self.n[1] >> 32) as u8 & 0xFF;
+        r[13] = (self.n[1] >> 40) as u8 & 0xFF;
+        r[14] = (self.n[1] >> 48) as u8 & 0xFF;
+        r[15] = (self.n[1] >> 56) as u8 & 0xFF;
+        r[16] = self.n[2] as u8 & 0xFF;
+        r[17] = (self.n[2] >> 8) as u8 & 0xFF;
+        r[18] = (self.n[2] >> 16) as u8 & 0xFF;
+        r[19] = (self.n[2] >> 24) as u8 & 0xFF;
+        r[20] = (self.n[2] >> 32) as u8 & 0xFF;
+        r[21] = (self.n[2] >> 40) as u8 & 0xFF;
+        r[22] = (self.n[2] >> 48) as u8 & 0xFF;
+        r[23] = (self.n[2] >> 56) as u8 & 0xFF;
+        r[24] = self.n[3] as u8 & 0xFF;
+        r[25] = (self.n[3] >> 8) as u8 & 0xFF;
+        r[26] = (self.n[3] >> 16) as u8 & 0xFF;
+        r[27] = (self.n[3] >> 24) as u8 & 0xFF;
+        r[28] = (self.n[3] >> 32) as u8 & 0xFF;
+        r[29] = (self.n[3] >> 40) as u8 & 0xFF;
+        r[30] = (self.n[3] >> 48) as u8 & 0xFF;
+        r[31] = (self.n[3] >> 56) as u8 & 0xFF;
+        r
     }
 }
  

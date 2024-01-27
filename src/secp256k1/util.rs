@@ -27,3 +27,29 @@ pub fn secp256k1_write_be32(p: &mut [u8], x: u32) {
     p[1] = ((x >> 16) & 0xff) as u8;
     p[0] = ((x >> 24) & 0xff) as u8;
 }
+
+/* Zero memory if flag == 1. Flag must be 0 or 1. Constant time. */
+// static SECP256K1_INLINE void secp256k1_memczero(void *s, size_t len, int flag) {
+//     unsigned char *p = (unsigned char *)s;
+//     /* Access flag with a volatile-qualified lvalue.
+//        This prevents clang from figuring out (after inlining) that flag can
+//        take only be 0 or 1, which leads to variable time code. */
+//     volatile int vflag = flag;
+//     unsigned char mask = -(unsigned char) vflag;
+//     while (len) {
+//         *p &= ~mask;
+//         p++;
+//         len--;
+//     }
+// }
+
+pub fn secp256k1_memczero(s: &mut [u8], flag: bool) {
+    let mut p = s;
+    let mut mask = 0xff;
+    if !flag {
+        mask = 0x00;
+    }
+    for i in 0..p.len() {
+        p[i] &= mask;
+    }
+}
