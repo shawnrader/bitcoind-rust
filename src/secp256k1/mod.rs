@@ -3,7 +3,9 @@
  * Distributed under the MIT software license, see the accompanying    *
  * file COPYING or https://www.opensource.org/licenses/mit-license.php.*
  ***********************************************************************/
+pub mod eckey;
 pub mod ecmult_gen;
+pub mod ecmult_impl;
 pub mod field;
 pub mod field_5x52;
 pub mod field_5x52_int128;
@@ -14,6 +16,7 @@ pub mod precomputed_ec_mult_gen;
 pub mod util;
 pub mod modinv64;
 
+use eckey::*;
 use ecmult_gen::*;
 use group::*;
 use scalar_4x64::*;
@@ -302,8 +305,8 @@ pub fn secp256k1_ec_pubkey_serialize(ctx: &secp256k1_context, output: &mut [u8],
     //ARG_CHECK(pubkey != NULL);
     //ARG_CHECK((flags & SECP256K1_FLAGS_TYPE_MASK) == SECP256K1_FLAGS_TYPE_COMPRESSION);
     if secp256k1_pubkey_load(ctx, &mut Q, pubkey) != 0 {
-        ret = secp256k1_eckey_pubkey_serialize(&Q, output, &len, flags & SECP256K1_FLAGS_BIT_COMPRESSION);
-        if (ret) {
+        ret = secp256k1_eckey_pubkey_serialize(&Q, output, flags & SECP256K1_FLAGS_BIT_COMPRESSION) as i32;
+        if ret != 0 {
             *outputlen = len;
         }
     }

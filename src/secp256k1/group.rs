@@ -175,7 +175,7 @@ const secp256k1_fe_const_b: secp256k1_fe = SECP256K1_FE_CONST(0, 0, 0, 0, 0, 0, 
 
 
 //static void secp256k1_ge_set_gej_zinv(secp256k1_ge *r, const secp256k1_gej *a, const secp256k1_fe *zi) {
-fn secp256k1_ge_set_gej_zinv(r: &mut secp256k1_ge, a: &secp256k1_gej, zi: &secp256k1_fe) {
+pub fn secp256k1_ge_set_gej_zinv(r: &mut secp256k1_ge, a: &secp256k1_gej, zi: &secp256k1_fe) {
     let mut zi2: secp256k1_fe;
     let mut zi3: secp256k1_fe;
     //VERIFY_CHECK(!a->infinity);
@@ -193,7 +193,7 @@ pub fn secp256k1_ge_set_xy(r: &mut secp256k1_ge, x: &secp256k1_fe, y: &secp256k1
     r.y = *y;
 }
 
-fn secp256k1_ge_is_infinity(a: &secp256k1_ge) -> bool {
+pub fn secp256k1_ge_is_infinity(a: &secp256k1_ge) -> bool {
     return a.infinity != 0;
 }
 
@@ -334,7 +334,7 @@ pub fn secp256k1_ge_clear(r: &mut secp256k1_ge) {
 }
 
 //static int secp256k1_ge_set_xo_var(secp256k1_ge *r, const secp256k1_fe *x, int odd) {
-fn secp256k1_ge_set_xo_var(r: &mut secp256k1_ge, x: &secp256k1_fe, odd: i32) -> i32 {
+pub fn secp256k1_ge_set_xo_var(r: &mut secp256k1_ge, x: &secp256k1_fe, odd: i32) -> i32 {
     //secp256k1_fe x2, x3;
     let mut x2: secp256k1_fe;
     let mut x3: secp256k1_fe;
@@ -388,7 +388,7 @@ pub fn secp256k1_gej_is_infinity(a: &secp256k1_gej) -> i32 {
 }
 
 //static int secp256k1_ge_is_valid_var(const secp256k1_ge *a) {
-fn secp256k1_ge_is_valid_var(a: &secp256k1_ge) -> i32 {
+pub fn secp256k1_ge_is_valid_var(a: &secp256k1_ge) -> i32 {
     //secp256k1_fe y2, x3;
     let mut y2: secp256k1_fe;
     let mut x3: secp256k1_fe;
@@ -439,7 +439,7 @@ fn secp256k1_gej_double(r: &mut secp256k1_gej, a: &secp256k1_gej) {
 }
 
 //static void secp256k1_gej_double_var(secp256k1_gej *r, const secp256k1_gej *a, secp256k1_fe *rzr) {
-fn secp256k1_gej_double_var(r: &mut secp256k1_gej, a: &secp256k1_gej, rzr: Option<&mut secp256k1_fe>) {
+pub fn secp256k1_gej_double_var(r: &mut secp256k1_gej, a: &secp256k1_gej, rzr: Option<&mut secp256k1_fe>) {
     /** For secp256k1, 2Q is infinity if and only if Q is infinity. This is because if 2Q = infinity,
      *  Q must equal -Q, or that Q.y == -(Q.y), or Q.y is 0. For a point on y^2 = x^3 + 7 to have
      *  y=0, x^3 must be -7 mod p. However, -7 has no cube root mod p.
@@ -542,7 +542,7 @@ fn secp256k1_gej_add_var(r: &mut secp256k1_gej, a: &secp256k1_gej, b: &secp256k1
 }
 
 //static void secp256k1_gej_add_ge_var(secp256k1_gej *r, const secp256k1_gej *a, const secp256k1_ge *b, secp256k1_fe *rzr) {
-fn secp256k1_gej_add_ge_var(r: &mut secp256k1_gej, a: &secp256k1_gej, b: &secp256k1_ge, rzr: &mut secp256k1_fe) {
+pub fn secp256k1_gej_add_ge_var(r: &mut secp256k1_gej, a: &secp256k1_gej, b: &secp256k1_ge, rzr: &mut secp256k1_fe) {
     /* 8 mul, 3 sqr, 13 add/negate/normalize_weak/normalizes_to_zero (ignoring special cases) */
     //secp256k1_fe z12, u1, u2, s1, s2, h, i, h2, h3, t;
     let mut z12: secp256k1_fe;

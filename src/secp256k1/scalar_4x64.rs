@@ -710,7 +710,7 @@ fn secp256k1_scalar_mul_512(l: &mut [u64; 8], a: &secp256k1_scalar, b: &secp256k
 //     secp256k1_scalar_mul_512(l, a, b);
 //     secp256k1_scalar_reduce_512(r, l);
 // }
-fn secp256k1_scalar_mul(r: &mut secp256k1_scalar, a: &secp256k1_scalar, b: &secp256k1_scalar) {
+pub fn secp256k1_scalar_mul(r: &mut secp256k1_scalar, a: &secp256k1_scalar, b: &secp256k1_scalar) {
     let mut l: [u64; 8] = [0; 8];
     secp256k1_scalar_mul_512(&mut l, a, b);
     secp256k1_scalar_reduce_512(r, &l);
