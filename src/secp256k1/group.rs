@@ -279,7 +279,7 @@ fn secp256k1_ge_set_all_gej_var(r: &mut [secp256k1_ge], a: &[secp256k1_gej], len
 }
 
 //static void secp256k1_ge_table_set_globalz(size_t len, secp256k1_ge *a, const secp256k1_fe *zr) {
-fn secp256k1_ge_table_set_globalz(len: usize, a: &mut [secp256k1_ge], zr: &[secp256k1_fe]) {
+pub fn secp256k1_ge_table_set_globalz(len: usize, a: &mut [secp256k1_ge], zr: &[secp256k1_fe]) {
     let mut i: usize = len - 1;
     let mut zs: secp256k1_fe;
 

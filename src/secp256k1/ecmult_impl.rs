@@ -59,6 +59,14 @@ macro_rules! VERIFY_CHECK {
     };
 }
 
+/** The number of entries a table with precomputed multiples needs to have. */
+//#define ECMULT_TABLE_SIZE!(w) (1L << ((w)-2))
+macro_rules! ECMULT_TABLE_SIZE {
+    ($w:expr) => {
+        (1 << ($w - 2))
+    };
+}
+
  /* The number of objects allocated on the scratch space for ecmult_multi algorithms */
  //#define PIPPENGER_SCRATCH_OBJECTS 6
  //#define STRAUSS_SCRATCH_OBJECTS 5
@@ -452,7 +460,7 @@ pub struct secp256k1_strauss_state {
 //  #endif
 //              secp256k1_gej_rescale(&tmp, &Z);
 //          }
-//          secp256k1_ecmult_odd_multiples_table(ECMULT_TABLE_SIZE(WINDOW_A), state->pre_a + no * ECMULT_TABLE_SIZE(WINDOW_A), state->aux + no * ECMULT_TABLE_SIZE(WINDOW_A), &Z, &tmp);
+//          secp256k1_ecmult_odd_multiples_table(ECMULT_TABLE_SIZE!(WINDOW_A), state->pre_a + no * ECMULT_TABLE_SIZE!(WINDOW_A), state->aux + no * ECMULT_TABLE_SIZE(WINDOW_A), &Z, &tmp);
 //          if (no) secp256k1_fe_mul(state->aux + no * ECMULT_TABLE_SIZE(WINDOW_A), state->aux + no * ECMULT_TABLE_SIZE(WINDOW_A), &(a[np].z));
  
 //          ++no;
@@ -560,18 +568,18 @@ fn secp256k1_ecmult_strauss_wnaf(state: &secp256k1_strauss_state, r: &mut secp25
         if no > 0 {
             secp256k1_gej_rescale(&mut tmp, &Z);
         }
-        secp256k1_ecmult_odd_multiples_table(ECMULT_TABLE_SIZE(WINDOW_A), state.pre_a + no * ECMULT_TABLE_SIZE(WINDOW_A), state.aux + no * ECMULT_TABLE_SIZE(WINDOW_A), &Z, &tmp);
+        secp256k1_ecmult_odd_multiples_table(ECMULT_TABLE_SIZE!(WINDOW_A), state.pre_a + no * ECMULT_TABLE_SIZE!(WINDOW_A), state.aux + no * ECMULT_TABLE_SIZE!(WINDOW_A), &Z, &tmp);
         if no > 0 {
-            secp256k1_fe_mul(state.aux + no * ECMULT_TABLE_SIZE(WINDOW_A), state.aux + no * ECMULT_TABLE_SIZE(WINDOW_A), &a[np].z);
+            secp256k1_fe_mul(state.aux + no * ECMULT_TABLE_SIZE!(WINDOW_A), state.aux + no * ECMULT_TABLE_SIZE!(WINDOW_A), &a[np].z);
         }
     }
 
     /* Bring them to the same Z denominator. */
-    secp256k1_ge_table_set_globalz(ECMULT_TABLE_SIZE(WINDOW_A) * no, state.pre_a, state.aux);
+    secp256k1_ge_table_set_globalz(ECMULT_TABLE_SIZE!(WINDOW_A) * no, state.pre_a, state.aux);
 
     for np in 0..no {
-        for i in 0..ECMULT_TABLE_SIZE(WINDOW_A) {
-            secp256k1_fe_mul(&mut state.aux[np * ECMULT_TABLE_SIZE(WINDOW_A) + i], &state.pre_a[np * ECMULT_TABLE_SIZE(WINDOW_A) + i].x, &secp256k1_const_beta);
+        for i in 0..ECMULT_TABLE_SIZE!(WINDOW_A) {
+            secp256k1_fe_mul(&mut state.aux[np * ECMULT_TABLE_SIZE!(WINDOW_A) + i], &state.pre_a[np * ECMULT_TABLE_SIZE!(WINDOW_A) + i].x, &secp256k1_const_beta);
         }
     }
 
@@ -594,11 +602,11 @@ fn secp256k1_ecmult_strauss_wnaf(state: &secp256k1_strauss_state, r: &mut secp25
         secp256k1_gej_double_var(r, r, None);
         for np in 0..no {
             if i < state.ps[np].bits_na_1 && (n = state.ps[np].wnaf_na_1[i]) != 0 {
-                secp256k1_ecmult_table_get_ge(&mut tmpa, state.pre_a + np * ECMULT_TABLE_SIZE(WINDOW_A), n, WINDOW_A);
+                secp256k1_ecmult_table_get_ge(&mut tmpa, state.pre_a + np * ECMULT_TABLE_SIZE!(WINDOW_A), n, WINDOW_A);
                 secp256k1_gej_add_ge_var(r, r, &tmpa, None);
             }
             if i < state.ps[np].bits_na_lam && (n = state.ps[np].wnaf_na_lam[i]) != 0 {
-                secp256k1_ecmult_table_get_ge_lambda(&mut tmpa, state.pre_a + np * ECMULT_TABLE_SIZE(WINDOW_A), state.aux + np * ECMULT_TABLE_SIZE(WINDOW_A), n, WINDOW_A);
+                secp256k1_ecmult_table_get_ge_lambda(&mut tmpa, state.pre_a + np * ECMULT_TABLE_SIZE!(WINDOW_A), state.aux + np * ECMULT_TABLE_SIZE!(WINDOW_A), n, WINDOW_A);
                 secp256k1_gej_add_ge_var(r, r, &tmpa, None);
             }
         }
@@ -626,8 +634,8 @@ fn secp256k1_ecmult_strauss_wnaf(state: &secp256k1_strauss_state, r: &mut secp25
 //  }
 
 pub fn secp256k1_ecmult(r: &mut secp256k1_gej, a: &secp256k1_gej, na: &secp256k1_scalar, ng: &secp256k1_scalar) {
-    let mut aux = [secp256k1_fe::new(); ECMULT_TABLE_SIZE(WINDOW_A)];
-    let mut pre_a = [secp256k1_ge::new(); ECMULT_TABLE_SIZE(WINDOW_A)];
+    let mut aux = [secp256k1_fe::new(); ECMULT_TABLE_SIZE!(WINDOW_A)];
+    let mut pre_a = [secp256k1_ge::new(); ECMULT_TABLE_SIZE!(WINDOW_A)];
     let mut ps = [secp256k1_strauss_point_state::new(); 1];
     let mut state = secp256k1_strauss_state {
         aux: aux.as_mut_ptr(),
@@ -643,7 +651,7 @@ pub fn secp256k1_ecmult(r: &mut secp256k1_gej, a: &secp256k1_gej, na: &secp256k1
 //      return n_points*point_size;
 //  }
 fn secp256k1_strauss_scratch_size(n_points: usize) -> usize {
-    let point_size = (std::mem::size_of::<secp256k1_ge>() + std::mem::size_of::<secp256k1_fe>()) * ECMULT_TABLE_SIZE(WINDOW_A) + std::mem::size_of::<secp256k1_strauss_point_state>() + std::mem::size_of::<secp256k1_gej>() + std::mem::size_of::<secp256k1_scalar>();
+    let point_size = (std::mem::size_of::<secp256k1_ge>() + std::mem::size_of::<secp256k1_fe>()) * ECMULT_TABLE_SIZE!(WINDOW_A) + std::mem::size_of::<secp256k1_strauss_point_state>() + std::mem::size_of::<secp256k1_gej>() + std::mem::size_of::<secp256k1_scalar>();
     n_points * point_size
 }
 
@@ -979,7 +987,7 @@ fn secp256k1_ecmult_pippenger_wnaf(buckets: &mut [secp256k1_gej], bucket_window:
     for i in (0..n_wnaf).rev() {
         let mut running_sum = secp256k1_gej::new();
 
-        for j in 0..ECMULT_TABLE_SIZE(bucket_window + 2) {
+        for j in 0..ECMULT_TABLE_SIZE!(bucket_window + 2) {
             secp256k1_gej_set_infinity(&mut buckets[j]);
         }
 
@@ -1019,7 +1027,7 @@ fn secp256k1_ecmult_pippenger_wnaf(buckets: &mut [secp256k1_gej], bucket_window:
          *
          * The doubling is done implicitly by deferring the final window doubling (of 'r').
          */
-        for j in (0..ECMULT_TABLE_SIZE(bucket_window + 2)).rev() {
+        for j in (0..ECMULT_TABLE_SIZE!(bucket_window + 2)).rev() {
             secp256k1_gej_add_var(&mut running_sum, &running_sum, &buckets[j], None);
             secp256k1_gej_add_var(r, r, &running_sum, None);
         }
