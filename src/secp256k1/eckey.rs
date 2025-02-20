@@ -7,6 +7,7 @@ use super::group::*;
 use super::field_5x52::*;
 use super::*;
 use ecmult_impl::*;
+use super::scalar_4x64::*;
 
 // static int secp256k1_eckey_pubkey_parse(secp256k1_ge *elem, const unsigned char *pub, size_t size) {
 //     if (size == 33 && (pub[0] == SECP256K1_TAG_PUBKEY_EVEN || pub[0] == SECP256K1_TAG_PUBKEY_ODD)) {

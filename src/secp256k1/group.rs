@@ -109,9 +109,15 @@ macro_rules! SECP256K1_GE_STORAGE_CONST {
 //     }
 // }
 
-//fn SECP256K1_GE_STORAGE_CONST_GET(t: secp256k1_ge_storage) -> (secp256k1_fe_storage, secp256k1_fe_storage) {
+//pub fn SECP256K1_GE_STORAGE_CONST_GET(t: secp256k1_ge_storage) -> (secp256k1_fe_storage, secp256k1_fe_storage) {
 //    (SECP256K1_FE_STORAGE_CONST_GET!(t.x), SECP256K1_FE_STORAGE_CONST_GET!(t.y))
 //}
+
+pub fn SECP256K1_GE_STORAGE_CONST_GET(t: secp256k1_ge_storage) -> (u32, u32, u32, u32, u32, u32, u32, u32, u32, u32, u32, u32, u32, u32, u32, u32) {
+    let fe_x = SECP256K1_FE_STORAGE_CONST_GET!(t.x);
+    let fe_y =  SECP256K1_FE_STORAGE_CONST_GET!(t.y);
+    (fe_x.0, fe_x.1, fe_x.2, fe_x.3, fe_x.4, fe_x.5, fe_x.6, fe_x.7, fe_y.0, fe_y.1, fe_y.2, fe_y.3, fe_y.4, fe_y.5, fe_y.6, fe_y.7)
+}
 
 fn SECP256K1_G_ORDER_13() -> secp256k1_ge {
     SECP256K1_GE_CONST( 0xc3459c3d, 0x35326167, 0xcd86cce8, 0x07a2417f,

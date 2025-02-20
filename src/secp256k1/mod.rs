@@ -13,16 +13,17 @@ pub mod scalar_4x64;
 pub mod group;
 pub mod hash;
 pub mod precomputed_ec_mult_gen;
+pub mod precomputed_ecmult;
 pub mod util;
 pub mod modinv64;
 
-use eckey::*;
-use ecmult_gen::*;
-use group::*;
-use scalar_4x64::*;
-use hash::*;
-use field_5x52::*;
-use util::*;
+// use eckey::*;
+// use ecmult_gen::*;
+// use group::*;
+// use scalar_4x64::*;
+// use hash::*;
+// use field_5x52::*;
+// use util::*;
 
 /* Limbs of the secp256k1 order. */
 pub const SECP256K1_N_0: u64 = 0xBFD25E8CD0364141;

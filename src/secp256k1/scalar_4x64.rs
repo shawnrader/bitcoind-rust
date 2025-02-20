@@ -750,7 +750,7 @@ fn secp256k1_scalar_shr_int(r: &mut secp256k1_scalar, n: i32) -> i32 {
 //     r2->d[2] = 0;
 //     r2->d[3] = 0;
 // }
-fn secp256k1_scalar_split_128(r1: &mut secp256k1_scalar, r2: &mut secp256k1_scalar, k: &secp256k1_scalar) {
+pub fn secp256k1_scalar_split_128(r1: &mut secp256k1_scalar, r2: &mut secp256k1_scalar, k: &secp256k1_scalar) {
     r1.d[0] = k.d[0];
     r1.d[1] = k.d[1];
     r1.d[2] = 0;

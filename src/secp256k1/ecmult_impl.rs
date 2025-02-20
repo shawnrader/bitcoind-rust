@@ -34,7 +34,10 @@ use super::*;
   */
  // #endif
  pub const WINDOW_A: i32 = 2;
- 
+
+// #define WINDOW_G ECMULT_WINDOW_SIZE
+pub const WINDOW_G: i32 = ECMULT_WINDOW_SIZE;
+
  //#define WNAF_BITS 128
  pub const WNAF_BITS: i32 = 128;
  
@@ -61,6 +64,7 @@ macro_rules! VERIFY_CHECK {
 
 /** The number of entries a table with precomputed multiples needs to have. */
 //#define ECMULT_TABLE_SIZE!(w) (1L << ((w)-2))
+#[macro_export]
 macro_rules! ECMULT_TABLE_SIZE {
     ($w:expr) => {
         (1 << ($w - 2))
