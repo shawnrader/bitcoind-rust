@@ -13,7 +13,6 @@ pub mod scalar_4x64;
 pub mod group;
 pub mod hash;
 pub mod precomputed_ec_mult_gen;
-pub mod precomputed_ecmult;
 pub mod util;
 pub mod modinv64;
 

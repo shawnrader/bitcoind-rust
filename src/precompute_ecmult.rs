@@ -4,33 +4,79 @@
  * file COPYING or https://www.opensource.org/licenses/mit-license.php.                              *
  *****************************************************************************************************/
 
+ pub mod secp256k1;
+
 use std::fs::File;
 use std::io::{self, Write};
+// Assuming these types exist in Rust
+
+use crate::secp256k1::group::*;
+use crate::secp256k1::ecmult_gen::ECMULT_WINDOW_SIZE;
 
 // Placeholder types and constants for the Rust version
-type Secp256k1GeStorage = [u32; 16];
+type secp256k1_ge_storage = [u32; 16];
 const ECMULT_TABLE_SIZE: fn(usize) -> usize = |i| 1 << (i - 2);
-const ECMULT_WINDOW_SIZE: usize = 15;
+//const ECMULT_WINDOW_SIZE: usize = 15;
 
 // Placeholder for the secp256k1_ge_const_g type
 struct Secp256k1Ge;
 static SECP256K1_GE_CONST_G: Secp256k1Ge = Secp256k1Ge;
 
-// Placeholder for the secp256k1_ecmult_compute_two_tables function
-fn secp256k1_ecmult_compute_two_tables(
-    table: &mut [Secp256k1GeStorage],
-    table_128: &mut [Secp256k1GeStorage],
-    window_g: usize,
-    ge_const_g: &Secp256k1Ge,
-) {
-    // Implementation would go here
+
+// Function to compute a single table
+fn secp256k1_ecmult_compute_table(table: &mut [secp256k1_ge_storage], window_g: i32, gen: &secp256k1_gej) {
+    let mut gj = *gen;  // Assuming Gej implements Copy or we need a clone method
+    let mut ge = secp256k1_ge::new();  // Assuming default constructor or appropriate initialization
+    let mut dgen = secp256k1_ge::new();
+
+    secp256k1_ge_set_gej_var(&mut ge, &gj);
+    secp256k1_ge_to_storage(&mut table[0], &ge);
+
+    secp256k1_gej_double_var(&mut gj, gen, None);
+    secp256k1_ge_set_gej_var(&mut dgen, &gj);
+
+    // Using Rust's range syntax instead of C++ increment
+    for j in 1..ecmult_table_size(window_g) {
+        secp256k1_gej_set_ge(&mut gj, &ge);
+        secp256k1_gej_add_ge_var(&mut gj, &gj, &dgen, None);
+        secp256k1_ge_set_gej_var(&mut ge, &gj);
+        secp256k1_ge_to_storage(&mut table[j as usize], &ge);
+    }
 }
 
-fn print_table(fp: &mut File, name: &str, window_g: usize, table: &[Secp256k1GeStorage]) -> io::Result<()> {
-    writeln!(fp, "pub const {}: [Secp256k1GeStorage; {}] = [", name, ECMULT_TABLE_SIZE(window_g))?;
+// Function to compute two tables
+fn secp256k1_ecmult_compute_two_tables(
+    table: &mut [secp256k1_ge_storage],
+    table_128: &mut [secp256k1_ge_storage],
+    window_g: i32,
+    gen: &secp256k1_ge
+) {
+    let mut gj = secp256k1_gej::new();
+    secp256k1_gej_set_ge(&mut gj, gen);
+    
+    secp256k1_ecmult_compute_table(table, window_g, &gj);
+    
+    // Rust range for the loop
+    for _ in 0..128 {
+        secp256k1_gej_double_var(&mut gj, &gj, None);
+    }
+    
+    secp256k1_ecmult_compute_table(table_128, window_g, &gj);
+}
+
+// Assuming this helper function exists or needs to be defined
+fn ecmult_table_size(window_g: i32) -> usize {
+    // Implementation would depend on the original macro/constant definition
+    // This is just a placeholder
+    (1 << window_g) as usize
+}
+
+
+fn print_table(fp: &mut File, name: &str, window_g: usize, table: &[secp256k1_ge_storage]) -> io::Result<()> {
+    writeln!(fp, "pub const {}: [secp256k1_ge_storage; {}] = [", name, ECMULT_TABLE_SIZE(window_g))?;
     writeln!(
         fp,
-        "    Secp256k1GeStorage([0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}])",
+        "    secp256k1_ge_storage([0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}])",
         table[0][0], table[0][1], table[0][2], table[0][3],
         table[0][4], table[0][5], table[0][6], table[0][7],
         table[0][8], table[0][9], table[0][10], table[0][11],
@@ -40,7 +86,7 @@ fn print_table(fp: &mut File, name: &str, window_g: usize, table: &[Secp256k1GeS
     for j in 1..ECMULT_TABLE_SIZE(window_g) {
         writeln!(
             fp,
-            "    ,Secp256k1GeStorage([0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}])",
+            "    ,secp256k1_ge_storage([0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}])",
             table[j][0], table[j][1], table[j][2], table[j][3],
             table[j][4], table[j][5], table[j][6], table[j][7],
             table[j][8], table[j][9], table[j][10], table[j][11],
@@ -52,8 +98,8 @@ fn print_table(fp: &mut File, name: &str, window_g: usize, table: &[Secp256k1GeS
 }
 
 fn print_two_tables(fp: &mut File, window_g: usize) -> io::Result<()> {
-    let mut table = vec![Secp256k1GeStorage::default(); ECMULT_TABLE_SIZE(window_g)];
-    let mut table_128 = vec![Secp256k1GeStorage::default(); ECMULT_TABLE_SIZE(window_g)];
+    let mut table = vec![secp256k1_ge_storage::default(); ECMULT_TABLE_SIZE(window_g)];
+    let mut table_128 = vec![secp256k1_ge_storage::default(); ECMULT_TABLE_SIZE(window_g)];
 
     secp256k1_ecmult_compute_two_tables(&mut table, &mut table_128, window_g, &SECP256K1_GE_CONST_G);
 
@@ -71,7 +117,7 @@ fn main() -> io::Result<()> {
     writeln!(fp, "// This file contains an array SECP256K1_PRE_G with odd multiples of the base point G and")?;
     writeln!(fp, "// an array SECP256K1_PRE_G_128 with odd multiples of 2^128*G for accelerating the computation of a*P + b*G.")?;
     writeln!(fp)?;
-    writeln!(fp, "use super::Secp256k1GeStorage;")?;
+    writeln!(fp, "use super::secp256k1_ge_storage;")?;
     writeln!(fp)?;
 
     print_two_tables(&mut fp, window_g)?;

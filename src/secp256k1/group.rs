@@ -225,7 +225,7 @@ pub fn secp256k1_ge_set_gej(r: &mut secp256k1_ge, a: &secp256k1_gej) {
 }
 
 //static void secp256k1_ge_set_gej_var(secp256k1_ge *r, secp256k1_gej *a) {
-fn secp256k1_ge_set_gej_var(r: &mut secp256k1_ge, a: &secp256k1_gej) {
+pub fn secp256k1_ge_set_gej_var(r: &mut secp256k1_ge, a: &secp256k1_gej) {
     let mut z2: secp256k1_fe;
     let mut z3: secp256k1_fe;
     if (a.infinity != 0) {
@@ -548,7 +548,7 @@ fn secp256k1_gej_add_var(r: &mut secp256k1_gej, a: &secp256k1_gej, b: &secp256k1
 }
 
 //static void secp256k1_gej_add_ge_var(secp256k1_gej *r, const secp256k1_gej *a, const secp256k1_ge *b, secp256k1_fe *rzr) {
-pub fn secp256k1_gej_add_ge_var(r: &mut secp256k1_gej, a: &secp256k1_gej, b: &secp256k1_ge, rzr: &mut secp256k1_fe) {
+pub fn secp256k1_gej_add_ge_var(r: &mut secp256k1_gej, a: &secp256k1_gej, b: &secp256k1_ge, rzr: Option<&mut secp256k1_fe>) {
     /* 8 mul, 3 sqr, 13 add/negate/normalize_weak/normalizes_to_zero (ignoring special cases) */
     //secp256k1_fe z12, u1, u2, s1, s2, h, i, h2, h3, t;
     let mut z12: secp256k1_fe;
@@ -563,15 +563,14 @@ pub fn secp256k1_gej_add_ge_var(r: &mut secp256k1_gej, a: &secp256k1_gej, b: &se
     let mut t: secp256k1_fe;
 
     if a.infinity != 0 {
-        //VERIFY_CHECK(rzr == NULL);
         secp256k1_gej_set_ge(r, b);
         return;
     }
     if b.infinity != 0 {
-        // TODO: make option?
-        //if (rzr != NULL) {
-            secp256k1_fe_set_int(rzr, 1);
-        //}
+        match rzr {
+            Some(rzr_val) => secp256k1_fe_set_int(rzr_val, 1),
+            None => break,
+        }
         *r = *a;
         return;
     }
@@ -619,7 +618,7 @@ pub fn secp256k1_gej_add_ge_var(r: &mut secp256k1_gej, a: &secp256k1_gej, b: &se
 }
 
 //static void secp256k1_gej_add_zinv_var(secp256k1_gej *r, const secp256k1_gej *a, const secp256k1_ge *b, const secp256k1_fe *bzinv) {
-fn secp256k1_gej_add_zinv_var(r: &mut secp256k1_gej, a: &secp256k1_gej, b: &secp256k1_ge, bzinv: &secp256k1_fe) {
+pub fn secp256k1_gej_add_zinv_var(r: &mut secp256k1_gej, a: &secp256k1_gej, b: &secp256k1_ge, bzinv: &secp256k1_fe) {
     /* 9 mul, 3 sqr, 13 add/negate/normalize_weak/normalizes_to_zero (ignoring special cases) */
     let mut az: secp256k1_fe;
     let mut z12: secp256k1_fe;

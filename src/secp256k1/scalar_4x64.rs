@@ -85,12 +85,11 @@ pub fn secp256k1_scalar_get_bits(a: &secp256k1_scalar, offset: u32, count: u32) 
 pub fn secp256k1_scalar_get_bits_var(a: &secp256k1_scalar, offset: u32, count: u32) -> u32 {
     // VERIFY_CHECK(count < 32);
     // VERIFY_CHECK(offset + count <= 256);
-    if ((offset + count - 1) >> 6 == offset >> 6) {
+    if (offset + count - 1) >> 6 == offset >> 6 {
         return secp256k1_scalar_get_bits(a, offset, count);
-    } else {
-        // VERIFY_CHECK((offset >> 6) + 1 < 4);
-        return ((a.d[offset as usize >> 6] as u32 >> (offset & 0x3F)) | ((a.d[(offset as usize >> 6) + 1] as u32) << (64 - (offset & 0x3F)))) & (((1 as u32) << count) - 1);
     }
+    // VERIFY_CHECK((offset >> 6) + 1 < 4);
+    ((a.d[offset as usize >> 6] as u32 >> (offset & 0x3F)) | ((a.d[(offset as usize >> 6) + 1] as u32) << (64 - (offset & 0x3F)))) & (((1 as u32) << count) - 1)
 }
 
 // SECP256K1_INLINE static int secp256k1_scalar_check_overflow(const secp256k1_scalar *a) {

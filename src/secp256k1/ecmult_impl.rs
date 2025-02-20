@@ -5,6 +5,8 @@
  ******************************************************************************/
 use super::group::*;
 use super::field_5x52::*;
+use super::ecmult_gen::{ECMULT_WINDOW_SIZE, secp256k1_const_beta};
+use super::scalar_4x64::{secp256k1_scalar_get_bits, secp256k1_scalar_negate, secp256k1_scalar_get_bits_var, secp256k1_scalar_split_128};
 use super::*;
 
 //#include "precomputed_ecmult.h"
@@ -615,11 +617,13 @@ fn secp256k1_ecmult_strauss_wnaf(state: &secp256k1_strauss_state, r: &mut secp25
             }
         }
         if i < bits_ng_1 && (n = wnaf_ng_1[i]) != 0 {
-            secp256k1_ecmult_table_get_ge_storage(&mut tmpa, secp256k1_pre_g, n, WINDOW_G);
+            todo!();
+            //secp256k1_ecmult_table_get_ge_storage(&mut tmpa, secp256k1_pre_g, n, WINDOW_G);
             secp256k1_gej_add_zinv_var(r, r, &tmpa, &Z);
         }
         if i < bits_ng_128 && (n = wnaf_ng_128[i]) != 0 {
-            secp256k1_ecmult_table_get_ge_storage(&mut tmpa, secp256k1_pre_g_128, n, WINDOW_G);
+            todo!();
+            //secp256k1_ecmult_table_get_ge_storage(&mut tmpa, secp256k1_pre_g_128, n, WINDOW_G);
             secp256k1_gej_add_zinv_var(r, r, &tmpa, &Z);
         }
     }
