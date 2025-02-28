@@ -2,6 +2,13 @@
 #![allow(dead_code)]
 
 use super::secp256k1_scalar;
+use crate::secp256k1::scalar_4x64::{
+    secp256k1_scalar_mul_shift_var,
+    secp256k1_scalar_mul,
+    secp256k1_scalar_add,
+    secp256k1_scalar_negate,
+};
+
 /*
  * Both lambda and beta are primitive cube roots of unity.  That is lamba^3 == 1 mod n and
  * beta^3 == 1 mod p, where n is the curve order and p is the field order.

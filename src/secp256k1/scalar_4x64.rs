@@ -784,7 +784,7 @@ fn secp256k1_scalar_eq(a: &secp256k1_scalar, b: &secp256k1_scalar) -> i32 {
 //     r->d[3] = shift < 320 ? (l[3 + shiftlimbs] >> shiftlow) : 0;
 //     secp256k1_scalar_cadd_bit(r, 0, (l[(shift - 1) >> 6] >> ((shift - 1) & 0x3f)) & 1);
 // }
-fn secp256k1_scalar_mul_shift_var(r: &mut secp256k1_scalar, a: &secp256k1_scalar, b: &secp256k1_scalar, shift: u32) {
+pub fn secp256k1_scalar_mul_shift_var(r: &mut secp256k1_scalar, a: &secp256k1_scalar, b: &secp256k1_scalar, shift: u32) {
     let mut l: [u64; 8] = [0; 8];
     let mut shiftlimbs: u32;
     let mut shiftlow: u32;
