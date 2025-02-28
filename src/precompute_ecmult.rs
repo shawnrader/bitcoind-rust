@@ -97,7 +97,7 @@ fn print_table(fp: &mut File, name: &str, window_g: usize, table: &[secp256k1_ge
     Ok(())
 }
 
-fn print_two_tables(fp: &mut File, window_g: usize) -> io::Result<()> {
+fn print_two_tables(fp: &mut File, window_g: i32) -> io::Result<()> {
     let mut table = vec![secp256k1_ge_storage::default(); ECMULT_TABLE_SIZE(window_g)];
     let mut table_128 = vec![secp256k1_ge_storage::default(); ECMULT_TABLE_SIZE(window_g)];
 

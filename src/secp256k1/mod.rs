@@ -15,6 +15,33 @@ pub mod hash;
 pub mod precomputed_ec_mult_gen;
 pub mod util;
 pub mod modinv64;
+pub mod scratch;
+
+use crate::secp256k1::ecmult_gen::secp256k1_ecmult_gen_context;
+use crate::secp256k1::group::{secp256k1_ge, secp256k1_ge_storage, secp256k1_ge_from_storage, secp256k1_gej};
+use crate::secp256k1::field_5x52::{
+    secp256k1_fe,
+    secp256k1_fe_set_b32,
+    secp256k1_fe_normalize_var,
+    secp256k1_fe_get_b32
+};
+use crate::secp256k1::scalar_4x64::{secp256k1_scalar_cmov, secp256k1_scalar_negate};
+use crate::secp256k1::group::{
+    secp256k1_ge_set_xy,
+    secp256k1_ge_to_storage,
+    secp256k1_ge_neg,
+    secp256k1_ge_set_gej,
+    secp256k1_gej_set_infinity
+};
+use crate::secp256k1::eckey::{
+    secp256k1_eckey_pubkey_serialize,
+    secp256k1_eckey_privkey_tweak_add,
+    secp256k1_eckey_pubkey_tweak_add,
+    secp256k1_eckey_privkey_tweak_mul,
+    secp256k1_eckey_pubkey_tweak_mul
+};
+
+
 
 // use eckey::*;
 // use ecmult_gen::*;

@@ -1,3 +1,20 @@
+
+use std::process;
+
+// Define the function pointer type using Rust-native types
+pub type secp256k1_callback = fn(&str);
+
+fn secp256k1_default_illegal_callback_fn(msg: &str) {
+    eprintln!("[libsecp256k1] illegal argument: {}", msg);
+    process::abort();
+}
+
+fn secp256k1_default_error_callback_fn(msg: &str) {
+    eprintln!("[libsecp256k1] internal consistency check failed: {}", msg);
+    process::abort();
+}
+
+
 /* Read a uint32_t in big endian */
 // SECP256K1_INLINE static uint32_t secp256k1_read_be32(const unsigned char* p) {
 //     return (uint32_t)p[0] << 24 |

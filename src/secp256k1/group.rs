@@ -475,7 +475,7 @@ pub fn secp256k1_gej_double_var(r: &mut secp256k1_gej, a: &secp256k1_gej, rzr: O
 }
 
 //static void secp256k1_gej_add_var(secp256k1_gej *r, const secp256k1_gej *a, const secp256k1_gej *b, secp256k1_fe *rzr) {
-fn secp256k1_gej_add_var(r: &mut secp256k1_gej, a: &secp256k1_gej, b: &secp256k1_gej, rzr: Option<&mut secp256k1_fe>) {
+pub fn secp256k1_gej_add_var(r: &mut secp256k1_gej, a: &secp256k1_gej, b: &secp256k1_gej, rzr: Option<&mut secp256k1_fe>) {
     /* 12 mul, 4 sqr, 11 add/negate/normalizes_to_zero (ignoring special cases) */
     //secp256k1_fe z22, z12, u1, u2, s1, s2, h, i, h2, h3, t;
     let mut z22: secp256k1_fe;
@@ -879,7 +879,7 @@ pub fn secp256k1_ge_storage_cmov(r: &mut secp256k1_ge_storage, a: &secp256k1_ge_
 }
 
 //static void secp256k1_ge_mul_lambda(secp256k1_ge *r, const secp256k1_ge *a) {
-fn secp256k1_ge_mul_lambda(r: &mut secp256k1_ge, a: &secp256k1_ge) {
+pub fn secp256k1_ge_mul_lambda(r: &mut secp256k1_ge, a: &secp256k1_ge) {
     *r = *a;
     secp256k1_fe_mul(&mut r.x, &r.x, &secp256k1_const_beta);
 }

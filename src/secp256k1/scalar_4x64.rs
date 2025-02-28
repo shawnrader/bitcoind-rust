@@ -294,7 +294,7 @@ fn secp256k1_scalar_is_one(a: &secp256k1_scalar) -> i32 {
 //     yes |= (a->d[0] > SECP256K1_N_H_0) & ~no;
 //     return yes;
 // }
-fn secp256k1_scalar_is_high(a: &secp256k1_scalar) -> i32 {
+pub fn secp256k1_scalar_is_high(a: &secp256k1_scalar) -> i32 {
     let mut yes = 0;
     let mut no = 0;
     no |= (a.d[3] < SECP256K1_N_H_3) as i32;
@@ -960,6 +960,6 @@ fn secp256k1_scalar_inverse_var(r: &mut secp256k1_scalar, x: &secp256k1_scalar) 
 // SECP256K1_INLINE static int secp256k1_scalar_is_even(const secp256k1_scalar *a) {
 //     return !(a->d[0] & 1);
 // }
-fn secp256k1_scalar_is_even(a: &secp256k1_scalar) -> i32 {
+pub fn secp256k1_scalar_is_even(a: &secp256k1_scalar) -> i32 {
     !(a.d[0] & 1) as i32
 }
