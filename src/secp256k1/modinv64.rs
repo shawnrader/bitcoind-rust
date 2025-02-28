@@ -1,3 +1,4 @@
+#![allow(warnings)]
 // typedef struct {
 //     int64_t v[5];
 // } secp256k1_modinv64_signed62;

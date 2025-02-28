@@ -1,4 +1,5 @@
-    use crate::secp256k1::field_5x52::*;
+#![allow(warnings)]
+use crate::secp256k1::field_5x52::*;
 
 //SECP256K1_INLINE static int secp256k1_fe_equal(const secp256k1_fe *a, const secp256k1_fe *b) {
 pub fn secp256k1_fe_equal(a: &secp256k1_fe, b: &secp256k1_fe) -> i32 {

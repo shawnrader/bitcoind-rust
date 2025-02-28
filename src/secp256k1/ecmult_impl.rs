@@ -4,6 +4,8 @@
  * file COPYING or https://www.opensource.org/licenses/mit-license.php.       *
  ******************************************************************************/
  
+#![allow(warnings)]
+
 use super::group::*;
 use super::field_5x52::*;
 use super::ecmult_gen::{ECMULT_WINDOW_SIZE, secp256k1_const_beta};
@@ -11,6 +13,7 @@ use super::scalar_4x64::{secp256k1_scalar_get_bits, secp256k1_scalar_negate, sec
 use super::*;
 use super::util::secp256k1_callback;
 use super::scratch::secp256k1_scratch;
+use super::scalar_impl::secp256k1_scalar_split_lambda;
 
 pub type secp256k1_ecmult_multi_callback = fn(&secp256k1_scalar, &secp256k1_ge, usize, &[u8]);
 
@@ -391,7 +394,6 @@ fn secp256k1_ecmult_wnaf(wnaf: &mut [i32], len: usize, a: &secp256k1_scalar, w: 
 
     last_set_bit + 1
 }
-
  
 //  struct secp256k1_strauss_point_state {
 //      int wnaf_na_1[129];

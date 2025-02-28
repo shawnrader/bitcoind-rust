@@ -3,6 +3,7 @@
  * Distributed under the MIT software license, see the accompanying    *
  * file COPYING or https://www.opensource.org/licenses/mit-license.php.*
  ***********************************************************************/
+ #![allow(warnings)]
  #[macro_export] 
 #[cfg(feature="verify")]
 macro_rules! VERIFY_BITS {

@@ -15,6 +15,7 @@ pub mod hash;
 pub mod precomputed_ec_mult_gen;
 pub mod util;
 pub mod modinv64;
+pub mod scalar_impl;
 pub mod scratch;
 
 use crate::secp256k1::ecmult_gen::secp256k1_ecmult_gen_context;

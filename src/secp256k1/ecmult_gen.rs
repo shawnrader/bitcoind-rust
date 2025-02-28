@@ -3,7 +3,8 @@
  * Distributed under the MIT software license, see the accompanying    *
  * file COPYING or https://www.opensource.org/licenses/mit-license.php.*
  ***********************************************************************/
-use super::{secp256k1_scalar, secp256k1_scalar_clear};
+ #![allow(warnings)]
+ use super::{secp256k1_scalar, secp256k1_scalar_clear};
 use super::group::*;
 use crate::secp256k1::precomputed_ec_mult_gen::*;
 use crate::secp256k1::field_5x52::*;

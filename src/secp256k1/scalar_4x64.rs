@@ -3,7 +3,8 @@
  * Distributed under the MIT software license, see the accompanying    *
  * file COPYING or https://www.opensource.org/licenses/mit-license.php.*
  ***********************************************************************/
-use crate::secp256k1::secp256k1_scalar;
+ #![allow(warnings)]
+ use crate::secp256k1::secp256k1_scalar;
 use crate::secp256k1::modinv64::*;
 
  /* Limbs of the secp256k1 order. */

@@ -1,4 +1,4 @@
-
+#![allow(warnings)]
 use std::process;
 
 // Define the function pointer type using Rust-native types

@@ -4,6 +4,7 @@
  * file COPYING or https://www.opensource.org/licenses/mit-license.php.*
  ***********************************************************************/
 
+#![allow(warnings)]
 use super::field_5x52::*;
 use crate::SECP256K1_FE_STORAGE_CONST_GET;
 use super::field::*;

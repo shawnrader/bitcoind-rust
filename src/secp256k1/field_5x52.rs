@@ -3,7 +3,7 @@
  * Distributed under the MIT software license, see the accompanying    *
  * file COPYING or https://www.opensource.org/licenses/mit-license.php.*
  ***********************************************************************/
-
+ #![allow(warnings)]
 //use std::arch::x86_64::_MM_MANT_NORM_P5_2;
 
 //use super::SECP256K1_FLAGS_TYPE_COMPRESSION;

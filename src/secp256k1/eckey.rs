@@ -3,7 +3,8 @@
  * Distributed under the MIT software license, see the accompanying    *
  * file COPYING or https://www.opensource.org/licenses/mit-license.php.*
  ***********************************************************************/
-use super::group::*;
+ #![allow(warnings)]
+ use super::group::*;
 use super::field_5x52::*;
 use super::*;
 use ecmult_impl::*;
