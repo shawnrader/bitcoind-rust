@@ -4,7 +4,6 @@
  * file COPYING or https://www.opensource.org/licenses/mit-license.php.*
  ***********************************************************************/
  #![allow(warnings)]
- use crate::secp256k1::secp256k1_scalar;
 use crate::secp256k1::modinv64::*;
 
  /* Limbs of the secp256k1 order. */
@@ -36,6 +35,23 @@ const SECP256K1_N_H_0: u64 = 0xDFE92F46681B20A0;
 const SECP256K1_N_H_1: u64 = 0x5D576E7357A4501D;
 const SECP256K1_N_H_2: u64 = 0xFFFFFFFFFFFFFFFF;
 const SECP256K1_N_H_3: u64 = 0x7FFFFFFFFFFFFFFF;
+
+#[derive(Clone)]
+pub struct secp256k1_scalar {
+    pub d: [u64; 4],
+}
+
+impl secp256k1_scalar {
+    pub fn new() -> Self {
+        secp256k1_scalar {
+            d: [0; 4],
+        }
+    }
+}
+
+pub fn SECP256K1_SCALAR_CONST(d7: u64, d6: u64, d5: u64, d4: u64, d3: u64, d2: u64, d1: u64, d0: u64) -> secp256k1_scalar {
+    secp256k1_scalar{d: [(d1 << 32) | d0, (d3 << 32) | d2, (d5 << 32) | d4, (d7 << 32) | d6]}
+}
 
 // SECP256K1_INLINE static void secp256k1_scalar_clear(secp256k1_scalar *r) {
 //     r->d[0] = 0;
@@ -221,7 +237,7 @@ pub fn secp256k1_scalar_cadd_bit(r: &mut secp256k1_scalar, mut bit: u32, flag: i
 //         *overflow = over;
 //     }
 // }
-fn secp256k1_scalar_set_b32 (r: &mut secp256k1_scalar, b32: &[u8], overflow: &i32) {
+pub fn secp256k1_scalar_set_b32 (r: &mut secp256k1_scalar, b32: &[u8], overflow: &i32) {
     let mut over: i32;
     r.d[0] = (b32[31] as u64) | (b32[30] as u64) << 8 | (b32[29] as u64) << 16 | (b32[28] as u64) << 24 | (b32[27] as u64) << 32 | (b32[26] as u64) << 40 | (b32[25] as u64) << 48 | (b32[24] as u64) << 56;
     r.d[1] = (b32[23] as u64) | (b32[22] as u64) << 8 | (b32[21] as u64) << 16 | (b32[20] as u64) << 24 | (b32[19] as u64) << 32 | (b32[18] as u64) << 40 | (b32[17] as u64) << 48 | (b32[16] as u64) << 56;
@@ -239,7 +255,7 @@ fn secp256k1_scalar_set_b32 (r: &mut secp256k1_scalar, b32: &[u8], overflow: &i3
 //     bin[16] = a->d[1] >> 56; bin[17] = a->d[1] >> 48; bin[18] = a->d[1] >> 40; bin[19] = a->d[1] >> 32; bin[20] = a->d[1] >> 24; bin[21] = a->d[1] >> 16; bin[22] = a->d[1] >> 8; bin[23] = a->d[1];
 //     bin[24] = a->d[0] >> 56; bin[25] = a->d[0] >> 48; bin[26] = a->d[0] >> 40; bin[27] = a->d[0] >> 32; bin[28] = a->d[0] >> 24; bin[29] = a->d[0] >> 16; bin[30] = a->d[0] >> 8; bin[31] = a->d[0];
 // }
-fn secp256k1_scalar_get_b32(bin: &[u8], a: &mut secp256k1_scalar) {
+pub fn secp256k1_scalar_get_b32(bin: &[u8], a: &mut secp256k1_scalar) {
     bin[0] = (a.d[3] >> 56) as u8; bin[1] = (a.d[3] >> 48) as u8; bin[2] = (a.d[3] >> 40) as u8; bin[3] = (a.d[3] >> 32) as u8; bin[4] = (a.d[3] >> 24) as u8; bin[5] = (a.d[3] >> 16) as u8; bin[6] = (a.d[3] >> 8) as u8; bin[7] = a.d[3] as u8;
     bin[8] = (a.d[2] >> 56) as u8; bin[9] = (a.d[2] >> 48) as u8; bin[10] = (a.d[2] >> 40) as u8; bin[11] = (a.d[2] >> 32) as u8; bin[12] = (a.d[2] >> 24) as u8; bin[13] = (a.d[2] >> 16) as u8; bin[14] = (a.d[2] >> 8) as u8; bin[15] = a.d[2] as u8;
     bin[16] = (a.d[1] >> 56) as u8; bin[17] = (a.d[1] >> 48) as u8; bin[18] = (a.d[1] >> 40) as u8; bin[19] = (a.d[1] >> 32) as u8; bin[20] = (a.d[1] >> 24) as u8; bin[21] = (a.d[1] >> 16) as u8; bin[22] = (a.d[1] >> 8) as u8; bin[23] = a.d[1] as u8;
@@ -250,7 +266,7 @@ fn secp256k1_scalar_get_b32(bin: &[u8], a: &mut secp256k1_scalar) {
 // SECP256K1_INLINE static int secp256k1_scalar_is_zero(const secp256k1_scalar *a) {
 //     return (a->d[0] | a->d[1] | a->d[2] | a->d[3]) == 0;
 // }
-fn secp256k1_scalar_is_zero(a: &secp256k1_scalar) -> i32 {
+pub fn secp256k1_scalar_is_zero(a: &secp256k1_scalar) -> i32 {
     ((a.d[0] | a.d[1] | a.d[2] | a.d[3]) == 0) as i32
 }
 

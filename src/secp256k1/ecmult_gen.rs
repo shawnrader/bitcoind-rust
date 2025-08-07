@@ -62,14 +62,14 @@ impl secp256k1_ecmult_gen_context {
         ctx.built = 1;
     }
     
-    pub fn secp256k1_ecmult_gen_context_is_built(ctx: &secp256k1_ecmult_gen_context) -> bool {
-        return ctx.built != 0;
+    pub fn secp256k1_ecmult_gen_context_is_built(&self) -> bool {
+        return self.built != 0;
     }
     
-    pub fn secp256k1_ecmult_gen_context_clear(ctx: &mut secp256k1_ecmult_gen_context) {
-        ctx.built = 0;
-        secp256k1_scalar_clear(&mut ctx.blind);
-        secp256k1_gej_clear(&mut ctx.initial);
+    pub fn secp256k1_ecmult_gen_context_clear(&mut self) {
+        self.built = 0;
+        secp256k1_scalar_clear(&mut self.blind);
+        secp256k1_gej_clear(&mut self.initial);
     }
     
     /* For accelerating the computation of a*G:
@@ -85,7 +85,7 @@ impl secp256k1_ecmult_gen_context {
      * the intermediate sums while computing a*G.
      * The prec values are stored in secp256k1_ecmult_gen_prec_table[i][n_i] = n_i * (PREC_G)^i * G + U_i.
      */
-    pub fn secp256k1_ecmult_gen(ctx: &secp256k1_ecmult_gen_context, r: &mut secp256k1_gej, gn: &secp256k1_scalar) {
+    pub fn secp256k1_ecmult_gen(&mut self, r: &mut secp256k1_gej, gn: &secp256k1_scalar) {
         let bits = ECMULT_GEN_PREC_BITS;
         let g = ECMULT_GEN_PREC_G!(bits as u64) as i32;
         let n = ECMULT_GEN_PREC_N!(bits as u64) as i32;
@@ -96,9 +96,9 @@ impl secp256k1_ecmult_gen_context {
         
         //memset(&adds, 0, sizeof(adds));
         let mut add: secp256k1_ge = secp256k1_ge::new();
-        *r = ctx.initial;
+        *r = self.initial;
         /* Blind scalar/point multiplication by computing (n-b)G + bG instead of nG. */
-        secp256k1_scalar_add(&mut gnb, gn, &ctx.blind);
+        secp256k1_scalar_add(&mut gnb, gn, &self.blind);
         add.infinity = 0;
         for i in (0..n) {
             n_i = secp256k1_scalar_get_bits(&gnb, (i * bits) as u32, bits as u32).try_into().unwrap();
@@ -127,7 +127,7 @@ impl secp256k1_ecmult_gen_context {
     
     /* Setup blinding values for secp256k1_ecmult_gen. */
     //static void secp256k1_ecmult_gen_blind(secp256k1_ecmult_gen_context *ctx, const unsigned char *seed32) {
-    pub fn secp256k1_ecmult_gen_blind(ctx: &mut secp256k1_ecmult_gen_context, seed32: &[u8]) {
+    pub fn secp256k1_ecmult_gen_blind(&mut self, seed32: &[u8]) {
         let mut b: secp256k1_scalar;
         let mut gb: secp256k1_gej;
         let mut s: secp256k1_fe;
@@ -138,12 +138,12 @@ impl secp256k1_ecmult_gen_context {
 
         if seed32.len() == 0 {
             /* When seed is NULL, reset the initial point and blinding value. */
-            secp256k1_gej_set_ge(&mut ctx.initial, &secp256k1_ge_const_g);
-            secp256k1_gej_neg(&mut ctx.initial, &ctx.initial);
-            secp256k1_scalar_set_int(&mut ctx.blind, 1);
+            secp256k1_gej_set_ge(&mut self.initial, &secp256k1_ge_const_g);
+            secp256k1_gej_neg(&mut self.initial, &self.initial);
+            secp256k1_scalar_set_int(&mut self.blind, 1);
         }
         /* The prior blinding value (if not reset) is chained forward by including it in the hash. */
-        secp256k1_scalar_get_b32(&mut nonce32, &ctx.blind);
+        secp256k1_scalar_get_b32(&mut nonce32, &mut self.blind);
         /** Using a CSPRNG allows a failure free interface, avoids needing large amounts of random data,
          *   and guards against weak or adversarial seeds.  This is a simpler and safer interface than
          *   asking the caller for blinding values directly and expecting them to retry on failure.
@@ -163,7 +163,7 @@ impl secp256k1_ecmult_gen_context {
         overflow |= secp256k1_fe_is_zero(&s);
         secp256k1_fe_cmov(&mut s, &secp256k1_fe_one, overflow);
         /* Randomize the projection to defend against multiplier sidechannels. */
-        secp256k1_gej_rescale(&mut ctx.initial, &s);
+        secp256k1_gej_rescale(&mut self.initial, &s);
         secp256k1_fe_clear(&mut s);
         secp256k1_rfc6979_hmac_sha256_generate(&rng, nonce32.as_mut_slice());
         let mut overflow:i32 = 0;
@@ -173,10 +173,10 @@ impl secp256k1_ecmult_gen_context {
         secp256k1_rfc6979_hmac_sha256_finalize(&mut rng);
         //memset(nonce32, 0, 32);
         nonce32 = [0; 32];
-        Self::secp256k1_ecmult_gen(ctx, &mut gb, &b);
+        self.secp256k1_ecmult_gen(&mut gb, &b);
         secp256k1_scalar_negate(&mut b, &b);
-        ctx.blind = b;
-        ctx.initial = gb;
+        self.blind = b;
+        self.initial = gb;
         secp256k1_scalar_clear(&mut b);
         secp256k1_gej_clear(&mut gb);
     }

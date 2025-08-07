@@ -3,7 +3,7 @@
  * Distributed under the MIT software license, see the accompanying    *
  * file COPYING or https://www.opensource.org/licenses/mit-license.php.*
  ***********************************************************************/
-
+ #![allow(warnings)]
  use crate::secp256k1::util::*;
  use wrapping_arithmetic::wrappit;
 

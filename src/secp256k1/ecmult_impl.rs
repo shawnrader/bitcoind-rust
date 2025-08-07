@@ -9,7 +9,15 @@
 use super::group::*;
 use super::field_5x52::*;
 use super::ecmult_gen::{ECMULT_WINDOW_SIZE, secp256k1_const_beta};
-use super::scalar_4x64::{secp256k1_scalar_get_bits, secp256k1_scalar_negate, secp256k1_scalar_get_bits_var, secp256k1_scalar_split_128, secp256k1_scalar_is_even, secp256k1_scalar_is_high, secp256k1_scalar_set_int};
+use scalar_4x64::{
+    secp256k1_scalar_get_bits,
+    secp256k1_scalar_negate,
+    secp256k1_scalar_get_bits_var,
+    secp256k1_scalar_split_128,
+    secp256k1_scalar_is_even,
+    secp256k1_scalar_is_high,
+    secp256k1_scalar_set_int,
+    secp256k1_scalar_is_zero};
 use super::*;
 use super::util::secp256k1_callback;
 use super::scratch::secp256k1_scratch;
@@ -202,8 +210,8 @@ pub fn secp256k1_ecmult_odd_multiples_table(n: i32, pre_a: &mut [secp256k1_ge], 
      */
     zr[0] = d.z;
 
-    for i in 1..n {
-        secp256k1_gej_add_ge_var(&mut ai, &ai, &d_ge, &zr[i]);
+    for i in 1..n as usize {
+        secp256k1_gej_add_ge_var(&mut ai, &ai, &d_ge, Some(&mut zr[i]));
         secp256k1_ge_set_xy(&mut pre_a[i], &ai.x, &ai.y);
     }
 
@@ -343,12 +351,12 @@ fn secp256k1_ecmult_table_get_ge_storage(r: &mut secp256k1_ge, pre: &[secp256k1_
 //  #endif
 //      return last_set_bit + 1;
 //  }
-fn secp256k1_ecmult_wnaf(wnaf: &mut [i32], len: usize, a: &secp256k1_scalar, w: i32) -> i32 {
+fn secp256k1_ecmult_wnaf(wnaf: &mut [i32], len: i32, a: &secp256k1_scalar, w: i32) -> i32 {
     let mut s = secp256k1_scalar::new();
-    let mut last_set_bit = -1;
-    let mut bit = 0;
-    let mut sign = 1;
-    let mut carry = 0;
+    let mut last_set_bit: i32 = -1;
+    let mut bit: i32 = 0;
+    let mut sign: i32 = 1;
+    let mut carry: i32 = 0;
 
     VERIFY_CHECK!(wnaf.len() > 0 && wnaf.len() <= 256);
     VERIFY_CHECK!(a != NULL);
@@ -357,15 +365,15 @@ fn secp256k1_ecmult_wnaf(wnaf: &mut [i32], len: usize, a: &secp256k1_scalar, w: 
     wnaf.iter_mut().for_each(|x| *x = 0);
 
     s = *a;
-    if secp256k1_scalar_get_bits(&s, 255, 1) {
+    if secp256k1_scalar_get_bits(&s, 255, 1) != 0 {
         secp256k1_scalar_negate(&mut s, &s);
         sign = -1;
     }
 
     while bit < len {
-        let now;
-        let word;
-        if secp256k1_scalar_get_bits(&s, bit, 1) == carry {
+        let mut now: i32;
+        let mut word: i32;
+        if secp256k1_scalar_get_bits(&s, bit as u32, 1) as i32 == carry {
             bit += 1;
             continue;
         }
@@ -375,12 +383,12 @@ fn secp256k1_ecmult_wnaf(wnaf: &mut [i32], len: usize, a: &secp256k1_scalar, w: 
             now = len - bit;
         }
 
-        word = secp256k1_scalar_get_bits_var(&s, bit, now) + carry;
+        word = secp256k1_scalar_get_bits_var(&s, bit as u32, now as u32) as i32 + carry;
 
         carry = (word >> (w - 1)) & 1;
         word -= carry << w;
 
-        wnaf[bit] = sign * word;
+        wnaf[bit as usize] = sign * word;
         last_set_bit = bit;
 
         bit += now;
@@ -401,12 +409,24 @@ fn secp256k1_ecmult_wnaf(wnaf: &mut [i32], len: usize, a: &secp256k1_scalar, w: 
 //      int bits_na_1;
 //      int bits_na_lam;
 //  };
+#[derive(Clone)]
 pub struct secp256k1_strauss_point_state {
     wnaf_na_1: [i32; 129],
     wnaf_na_lam: [i32; 129],
     bits_na_1: i32,
     bits_na_lam: i32,
 } 
+
+impl secp256k1_strauss_point_state {
+    pub fn new() -> Self {
+        Self {
+            wnaf_na_1: [0i32; 129],
+            wnaf_na_lam: [0i32; 129],
+            bits_na_1: 0,
+            bits_na_lam: 0,
+        }
+    }
+}
 
 //  struct secp256k1_strauss_state {
 //      /* aux is used to hold z-ratios, and then used to hold pre_a[i].x * BETA values. */
@@ -415,9 +435,9 @@ pub struct secp256k1_strauss_point_state {
 //      struct secp256k1_strauss_point_state* ps;
 //  };
 pub struct secp256k1_strauss_state {
-    aux: *mut secp256k1_fe,
-    pre_a: *mut secp256k1_ge,
-    ps: *mut secp256k1_strauss_point_state,
+    aux: Vec<secp256k1_fe>,
+    pre_a: Vec<secp256k1_ge>,
+    ps: Vec<secp256k1_strauss_point_state>,
 }
 
 //  static void secp256k1_ecmult_strauss_wnaf(const struct secp256k1_strauss_state *state, secp256k1_gej *r, size_t num, const secp256k1_gej *a, const secp256k1_scalar *na, const secp256k1_scalar *ng) {
@@ -551,13 +571,13 @@ fn secp256k1_ecmult_strauss_wnaf(state: &secp256k1_strauss_state, r: &mut secp25
         let mut tmp = secp256k1_gej::new();
         let mut na_1 = secp256k1_scalar::new();
         let mut na_lam = secp256k1_scalar::new();
-        if secp256k1_scalar_is_zero(&na[np]) || secp256k1_gej_is_infinity(&a[np]) {
+        if secp256k1_scalar_is_zero(&na[np]) != 0 || secp256k1_gej_is_infinity(&a[np]) != 0 {
             continue;
         }
-        secp256k1_scalar_split_lambda(&na_1, &na_lam, &na[np]);
+        secp256k1_scalar_split_lambda(&mut na_1, &mut na_lam, &na[np]);
 
-        state.ps[no].bits_na_1 = secp256k1_ecmult_wnaf(state.ps[no].wnaf_na_1, 129, &na_1, WINDOW_A);
-        state.ps[no].bits_na_lam = secp256k1_ecmult_wnaf(state.ps[no].wnaf_na_lam, 129, &na_lam, WINDOW_A);
+        state.ps[no].bits_na_1 = secp256k1_ecmult_wnaf(&mut state.ps[no].wnaf_na_1, 129, &na_1, WINDOW_A);
+        state.ps[no].bits_na_lam = secp256k1_ecmult_wnaf(&mut state.ps[no].wnaf_na_lam, 129, &na_lam, WINDOW_A);
         VERIFY_CHECK!(state.ps[no].bits_na_1 <= 129);
         VERIFY_CHECK!(state.ps[no].bits_na_lam <= 129);
         if state.ps[no].bits_na_1 > bits {
@@ -581,14 +601,14 @@ fn secp256k1_ecmult_strauss_wnaf(state: &secp256k1_strauss_state, r: &mut secp25
         if no > 0 {
             secp256k1_gej_rescale(&mut tmp, &Z);
         }
-        secp256k1_ecmult_odd_multiples_table(ECMULT_TABLE_SIZE!(WINDOW_A), state.pre_a + no * ECMULT_TABLE_SIZE!(WINDOW_A), state.aux + no * ECMULT_TABLE_SIZE!(WINDOW_A), &Z, &tmp);
+        secp256k1_ecmult_odd_multiples_table(ECMULT_TABLE_SIZE!(WINDOW_A), &mut state.pre_a[no * ECMULT_TABLE_SIZE!(WINDOW_A)..], &mut state.aux[no * ECMULT_TABLE_SIZE!(WINDOW_A)..], &mut Z, &tmp);
         if no > 0 {
-            secp256k1_fe_mul(state.aux + no * ECMULT_TABLE_SIZE!(WINDOW_A), state.aux + no * ECMULT_TABLE_SIZE!(WINDOW_A), &a[np].z);
+            secp256k1_fe_mul(&mut state.aux[no * ECMULT_TABLE_SIZE!(WINDOW_A)], &state.aux[no * ECMULT_TABLE_SIZE!(WINDOW_A)], &a[np].z);
         }
     }
 
     /* Bring them to the same Z denominator. */
-    secp256k1_ge_table_set_globalz(ECMULT_TABLE_SIZE!(WINDOW_A) * no, state.pre_a, state.aux);
+    secp256k1_ge_table_set_globalz(ECMULT_TABLE_SIZE!(WINDOW_A) * no, &mut state.pre_a, &mut state.aux);
 
     for np in 0..no {
         for i in 0..ECMULT_TABLE_SIZE!(WINDOW_A) {
@@ -597,7 +617,7 @@ fn secp256k1_ecmult_strauss_wnaf(state: &secp256k1_strauss_state, r: &mut secp25
     }
 
     if ng.len() > 0 {
-        secp256k1_scalar_split_128(&ng_1, &ng_128, &ng);
+        secp256k1_scalar_split_128(&mut ng_1, &mut ng_128, &ng[0]);
         bits_ng_1 = secp256k1_ecmult_wnaf(&mut wnaf_ng_1, 129, &ng_1, WINDOW_G);
         bits_ng_128 = secp256k1_ecmult_wnaf(&mut wnaf_ng_128, 129, &ng_128, WINDOW_G);
         if bits_ng_1 > bits {
@@ -614,21 +634,25 @@ fn secp256k1_ecmult_strauss_wnaf(state: &secp256k1_strauss_state, r: &mut secp25
         let mut n: i32;
         secp256k1_gej_double_var(r, r, None);
         for np in 0..no {
-            if i < state.ps[np].bits_na_1 && (n = state.ps[np].wnaf_na_1[i]) != 0 {
-                secp256k1_ecmult_table_get_ge(&mut tmpa, state.pre_a + np * ECMULT_TABLE_SIZE!(WINDOW_A), n, WINDOW_A);
+            n = state.ps[np].wnaf_na_1[i as usize];
+            if i < state.ps[np].bits_na_1 && n != 0 {
+                secp256k1_ecmult_table_get_ge(&mut tmpa, &mut state.pre_a[np * ECMULT_TABLE_SIZE!(WINDOW_A)..], n, WINDOW_A);
                 secp256k1_gej_add_ge_var(r, r, &tmpa, None);
             }
-            if i < state.ps[np].bits_na_lam && (n = state.ps[np].wnaf_na_lam[i]) != 0 {
-                secp256k1_ecmult_table_get_ge_lambda(&mut tmpa, state.pre_a + np * ECMULT_TABLE_SIZE!(WINDOW_A), state.aux + np * ECMULT_TABLE_SIZE!(WINDOW_A), n, WINDOW_A);
+            n = state.ps[np].wnaf_na_lam[i as usize];
+            if i < state.ps[np].bits_na_lam && n != 0 {
+                secp256k1_ecmult_table_get_ge_lambda(&mut tmpa, &mut state.pre_a[np * ECMULT_TABLE_SIZE!(WINDOW_A)..], &mut state.aux[np * ECMULT_TABLE_SIZE!(WINDOW_A)..], n, WINDOW_A);
                 secp256k1_gej_add_ge_var(r, r, &tmpa, None);
             }
         }
-        if i < bits_ng_1 && (n = wnaf_ng_1[i]) != 0 {
+        n = wnaf_ng_1[i as usize];
+        if i < bits_ng_1 && n != 0 {
             todo!();
             //secp256k1_ecmult_table_get_ge_storage(&mut tmpa, secp256k1_pre_g, n, WINDOW_G);
             secp256k1_gej_add_zinv_var(r, r, &tmpa, &Z);
         }
-        if i < bits_ng_128 && (n = wnaf_ng_128[i]) != 0 {
+        n = wnaf_ng_128[i as usize];
+        if i < bits_ng_128 && n != 0 {
             todo!();
             //secp256k1_ecmult_table_get_ge_storage(&mut tmpa, secp256k1_pre_g_128, n, WINDOW_G);
             secp256k1_gej_add_zinv_var(r, r, &tmpa, &Z);
@@ -649,16 +673,16 @@ fn secp256k1_ecmult_strauss_wnaf(state: &secp256k1_strauss_state, r: &mut secp25
 //  }
 
 pub fn secp256k1_ecmult(r: &mut secp256k1_gej, a: &secp256k1_gej, na: &secp256k1_scalar, ng: &secp256k1_scalar) {
-    let mut aux = [secp256k1_fe::new(); ECMULT_TABLE_SIZE!(WINDOW_A)];
-    let mut pre_a = [secp256k1_ge::new(); ECMULT_TABLE_SIZE!(WINDOW_A)];
-    let mut ps = [secp256k1_strauss_point_state::new(); 1];
+    let mut aux = vec![secp256k1_fe::new(); ECMULT_TABLE_SIZE!(WINDOW_A)];
+    let mut pre_a = vec![secp256k1_ge::new(); ECMULT_TABLE_SIZE!(WINDOW_A)];
+    let mut ps = vec![secp256k1_strauss_point_state::new(); 1];
     let mut state = secp256k1_strauss_state {
-        aux: aux.as_mut_ptr(),
-        pre_a: pre_a.as_mut_ptr(),
-        ps: ps.as_mut_ptr(),
+        aux,
+        pre_a,
+        ps,
     };
 
-    secp256k1_ecmult_strauss_wnaf(&state, r, 1, &[a], &[na], &[ng]);
+    secp256k1_ecmult_strauss_wnaf(&state, r, 1, std::slice::from_ref(a), std::slice::from_ref(na), std::slice::from_ref(ng));
 }
  
 //  static size_t secp256k1_strauss_scratch_size(size_t n_points) {
@@ -709,33 +733,35 @@ fn secp256k1_strauss_scratch_size(n_points: usize) -> usize {
 //      secp256k1_scratch_apply_checkpoint(error_callback, scratch, scratch_checkpoint);
 //      return 1;
 //  }
-fn secp256k1_ecmult_strauss_batch(error_callback: &secp256k1_callback, scratch: &mut secp256k1_scratch, r: &mut secp256k1_gej, inp_g_sc: Option<&secp256k1_scalar>, cb: secp256k1_ecmult_multi_callback, cbdata: &[u8], n_points: usize, cb_offset: usize) -> i32 {
+fn secp256k1_ecmult_strauss_batch(error_callback: &secp256k1_callback, scratch: &mut secp256k1_scratch, r: &mut secp256k1_gej, inp_g_sc: &[secp256k1_scalar], cb: secp256k1_ecmult_multi_callback, cbdata: &[u8], n_points: usize, cb_offset: usize) -> i32 {
     let mut points = vec![secp256k1_gej::new(); n_points];
     let mut scalars = vec![secp256k1_scalar::new(); n_points];
     let mut state = secp256k1_strauss_state {
-        aux: std::ptr::null_mut(),
-        pre_a: std::ptr::null_mut(),
-        ps: std::ptr::null_mut(),
+        aux: vec![secp256k1_fe::new(); n_points],
+        pre_a: vec![secp256k1_ge::new(); n_points],
+        ps: vec![secp256k1_strauss_point_state::new(); n_points],
     };
     let mut i: usize;
-    let scratch_checkpoint = secp256k1_scratch_checkpoint(error_callback, scratch);
+    todo!();
+    //let scratch_checkpoint = secp256k1_scratch_checkpoint(error_callback, scratch);
 
     secp256k1_gej_set_infinity(r);
-    if inp_g_sc == None && n_points == 0 {
+    if inp_g_sc.len() == 0 && n_points == 0 {
         return 1;
     }
 
     points.iter_mut().for_each(|point| {
         let mut point = secp256k1_ge::new();
-        if !cb(&mut scalars[i], &mut point, i + cb_offset, cbdata) {
-            secp256k1_scratch_apply_checkpoint(error_callback, scratch, scratch_checkpoint);
-            return 0;
-        }
+        todo!();        
+        // if !cb(&mut scalars[i], &mut point, i + cb_offset, cbdata) {
+        //     secp256k1_scratch_apply_checkpoint(error_callback, scratch, scratch_checkpoint);
+        //     return 0;
+        // }
         secp256k1_gej_set_ge(&mut points[i], &point);
     });
 
     secp256k1_ecmult_strauss_wnaf(&state, r, n_points, &points, &scalars, inp_g_sc);
-    secp256k1_scratch_apply_checkpoint(error_callback, scratch, scratch_checkpoint);
+    todo!(); //secp256k1_scratch_apply_checkpoint(error_callback, scratch, scratch_checkpoint);
     return 1;
 }
  
@@ -744,7 +770,7 @@ fn secp256k1_ecmult_strauss_batch(error_callback: &secp256k1_callback, scratch: 
 //      return secp256k1_ecmult_strauss_batch(error_callback, scratch, r, inp_g_sc, cb, cbdata, n, 0);
 //  }
 fn secp256k1_ecmult_strauss_batch_single(error_callback: &secp256k1_callback, scratch: &mut secp256k1_scratch, r: &mut secp256k1_gej, inp_g_sc: &secp256k1_scalar, cb: secp256k1_ecmult_multi_callback, cbdata: &[u8], n: usize) -> i32 {
-    secp256k1_ecmult_strauss_batch(error_callback, scratch, r, inp_g_sc, cb, cbdata, n, 0)
+    secp256k1_ecmult_strauss_batch(error_callback, scratch, r, std::slice::from_ref(inp_g_sc), cb, cbdata, n, 0)
 }
 
 
@@ -752,7 +778,8 @@ fn secp256k1_ecmult_strauss_batch_single(error_callback: &secp256k1_callback, sc
 //      return secp256k1_scratch_max_allocation(error_callback, scratch, STRAUSS_SCRATCH_OBJECTS) / secp256k1_strauss_scratch_size(1);
 //  }
 fn secp256k1_strauss_max_points(error_callback: &secp256k1_callback, scratch: &mut secp256k1_scratch) -> usize {
-    secp256k1_scratch_max_allocation(error_callback, scratch, STRAUSS_SCRATCH_OBJECTS) / secp256k1_strauss_scratch_size(1)
+    todo!(); //secp256k1_scratch_max_allocation(error_callback, scratch, STRAUSS_SCRATCH_OBJECTS) / secp256k1_strauss_scratch_size(1)
+    return 0;
 }
 
  /** Convert a number to WNAF notation.
@@ -824,52 +851,52 @@ fn secp256k1_strauss_max_points(error_callback: &secp256k1_callback, scratch: &m
 //      return skew;
 //  }
 
-fn secp256k1_wnaf_fixed(wnaf: &mut i32, s: &secp256k1_scalar, w: i32) -> i32 {
-    let mut skew = 0;
+fn secp256k1_wnaf_fixed(wnaf: &mut [i32], s: &secp256k1_scalar, w: i32) -> i32 {
+    let mut skew: i32 = 0;
     let mut pos: i32;
     let mut max_pos: i32;
     let mut last_w: i32;
     let mut work = s;
 
-    if secp256k1_scalar_is_zero(s) {
+    if secp256k1_scalar_is_zero(s) == 1 {
         for pos in 0..WNAF_SIZE!(w) {
-            wnaf[pos] = 0;
+            wnaf[pos as usize] = 0;
         }
         return 0;
     }
 
-    if secp256k1_scalar_is_even(s) {
+    if secp256k1_scalar_is_even(s) == 1 {
         skew = 1;
     }
 
-    wnaf[0] = secp256k1_scalar_get_bits_var(work, 0, w) + skew;
+    wnaf[0] = secp256k1_scalar_get_bits_var(work, 0, w as u32) as i32 + skew;
     last_w = WNAF_BITS - (WNAF_SIZE!(w) - 1) * w;
 
     for pos in (1..WNAF_SIZE!(w)).rev() {
-        let val = secp256k1_scalar_get_bits_var(work, pos * w, if pos == WNAF_SIZE!(w) - 1 { last_w } else { w });
+        let val = secp256k1_scalar_get_bits_var(work, (pos * w) as u32, if pos == WNAF_SIZE!(w) - 1 { last_w as u32} else { w as u32});
         if val != 0 {
             break;
         }
-        wnaf[pos] = 0;
+        wnaf[pos as usize] = 0;
     }
     max_pos = pos;
     pos = 1;
 
     while pos <= max_pos {
-        let val = secp256k1_scalar_get_bits_var(work, pos * w, if pos == WNAF_SIZE!(w) - 1 { last_w } else { w });
+        let val = secp256k1_scalar_get_bits_var(work, (pos * w) as u32, if pos == WNAF_SIZE!(w) - 1 { last_w as u32} else { w as u32 });
         if val & 1 == 0 {
-            wnaf[pos - 1] -= 1 << w;
-            wnaf[pos] = val + 1;
+            wnaf[pos as usize - 1] -= 1 << w;
+            wnaf[pos as usize] = val as i32 + 1;
         } else {
-            wnaf[pos] = val;
+            wnaf[pos as usize] = val as i32;
         }
-        if pos >= 2 && ((wnaf[pos - 1] == 1 && wnaf[pos - 2] < 0) || (wnaf[pos - 1] == -1 && wnaf[pos - 2] > 0)) {
-            if wnaf[pos - 1] == 1 {
-                wnaf[pos - 2] += 1 << w;
+        if pos >= 2 && ((wnaf[pos as usize - 1] == 1 && wnaf[pos as usize - 2] < 0) || (wnaf[pos as usize - 1] == -1 && wnaf[pos as usize - 2] > 0)) {
+            if wnaf[pos as usize - 1] == 1 {
+                wnaf[pos as usize - 2] += 1 << w;
             } else {
-                wnaf[pos - 2] -= 1 << w;
+                wnaf[pos as usize - 2] -= 1 << w;
             }
-            wnaf[pos - 1] = 0;
+            wnaf[pos as usize - 1] = 0;
         }
         pos += 1;
     }
@@ -881,9 +908,16 @@ fn secp256k1_wnaf_fixed(wnaf: &mut i32, s: &secp256k1_scalar, w: i32) -> i32 {
 //      int skew_na;
 //      size_t input_pos;
 //  };
+#[derive(Clone)]
 struct secp256k1_pippenger_point_state {
     skew_na: i32,
     input_pos: usize,
+}
+
+impl secp256k1_pippenger_point_state {
+    pub fn new() -> Self {
+        Self {skew_na: 0, input_pos: 0}
+    }
 }
 
 //  struct secp256k1_pippenger_state {
@@ -891,8 +925,8 @@ struct secp256k1_pippenger_point_state {
 //      struct secp256k1_pippenger_point_state* ps;
 //  };
 struct secp256k1_pippenger_state {
-    wnaf_na: *mut i32,
-    ps: *mut secp256k1_pippenger_point_state,
+    wnaf_na: Vec<i32>,
+    ps: Vec<secp256k1_pippenger_point_state>,
 }
 
  /*
@@ -978,7 +1012,7 @@ struct secp256k1_pippenger_state {
 //      }
 //      return 1;
 //  }
-fn secp256k1_ecmult_pippenger_wnaf(buckets: &mut [secp256k1_gej], bucket_window: i32, state: &mut secp256k1_pippenger_state, r: &mut secp256k1_gej, sc: &secp256k1_scalar, pt: &[secp256k1_ge], num: usize) -> i32 {
+fn secp256k1_ecmult_pippenger_wnaf(buckets: &mut [secp256k1_gej], bucket_window: i32, state: &mut secp256k1_pippenger_state, r: &mut secp256k1_gej, sc: &[secp256k1_scalar], pt: &[secp256k1_ge], num: usize) -> i32 {
     let n_wnaf = WNAF_SIZE!(bucket_window + 1);
     let mut np: usize;
     let mut no = 0;
@@ -986,11 +1020,11 @@ fn secp256k1_ecmult_pippenger_wnaf(buckets: &mut [secp256k1_gej], bucket_window:
     let mut j: i32;
 
     for np in 0..num {
-        if secp256k1_scalar_is_zero(&sc[np]) || secp256k1_ge_is_infinity(&pt[np]) {
+        if secp256k1_scalar_is_zero(&sc[np]) == 1|| secp256k1_ge_is_infinity(&pt[np]) {
             continue;
         }
         state.ps[no].input_pos = np;
-        state.ps[no].skew_na = secp256k1_wnaf_fixed(&mut state.wnaf_na[no * n_wnaf], &sc[np], bucket_window + 1);
+        state.ps[no].skew_na = secp256k1_wnaf_fixed(&mut state.wnaf_na[(no * n_wnaf as usize)..], &sc[np], bucket_window + 1);
         no += 1;
     }
     secp256k1_gej_set_infinity(r);
@@ -1167,11 +1201,11 @@ fn secp256k1_ecmult_endo_split(s1: &mut secp256k1_scalar, s2: &mut secp256k1_sca
     secp256k1_scalar_split_lambda(s1, s2, &tmp);
     secp256k1_ge_mul_lambda(p2, p1);
 
-    if secp256k1_scalar_is_high(s1) {
+    if secp256k1_scalar_is_high(s1) != 0 {
         secp256k1_scalar_negate(s1, s1);
         secp256k1_ge_neg(p1, p1);
     }
-    if secp256k1_scalar_is_high(s2) {
+    if secp256k1_scalar_is_high(s2) != 0 {
         secp256k1_scalar_negate(s2, s2);
         secp256k1_ge_neg(p2, p2);
     }
@@ -1267,15 +1301,15 @@ fn secp256k1_pippenger_scratch_size(n_points: usize, bucket_window: i32) -> usiz
 //      secp256k1_scratch_apply_checkpoint(error_callback, scratch, scratch_checkpoint);
 //      return 1;
 //  }
-fn secp256k1_ecmult_pippenger_batch(error_callback: &secp256k1_callback, scratch: &mut secp256k1_scratch, r: &mut secp256k1_gej, inp_g_sc: &secp256k1_scalar, cb: secp256k1_ecmult_multi_callback, cbdata: &[u8], n_points: usize, cb_offset: usize) -> i32 {
-    let scratch_checkpoint = secp256k1_scratch_checkpoint(error_callback, scratch);
+fn secp256k1_ecmult_pippenger_batch(error_callback: &secp256k1_callback, scratch: &mut secp256k1_scratch, r: &mut secp256k1_gej, inp_g_sc: &[secp256k1_scalar], cb: secp256k1_ecmult_multi_callback, cbdata: &[u8], n_points: usize, cb_offset: usize) -> i32 {
+    todo!(); //let scratch_checkpoint = secp256k1_scratch_checkpoint(error_callback, scratch);
     let entries = 2 * n_points + 2;
     let mut points: Vec<secp256k1_ge> = vec![secp256k1_ge::new(); entries];
     let mut scalars: Vec<secp256k1_scalar> = vec![secp256k1_scalar::new(); entries];
     let bucket_window = secp256k1_pippenger_bucket_window(n_points);
     let mut state_space = secp256k1_pippenger_state {
         ps: vec![secp256k1_pippenger_point_state::new(); entries],
-        wnaf_na: vec![0; entries * (WNAF_SIZE!(bucket_window + 1))],
+        wnaf_na: vec![0; entries * (WNAF_SIZE!(bucket_window + 1) as usize)],
     };
     let mut idx = 0;
     let mut point_idx = 0;
@@ -1284,7 +1318,7 @@ fn secp256k1_ecmult_pippenger_batch(error_callback: &secp256k1_callback, scratch
     let mut buckets: Vec<secp256k1_gej> = vec![secp256k1_gej::new(); 1 << bucket_window];
 
     secp256k1_gej_set_infinity(r);
-    if inp_g_sc.is_null() && n_points == 0 {
+    if inp_g_sc.len() = 0 && n_points == 0 {
         return 1;
     }
 

@@ -11,6 +11,7 @@
 use super::field_5x52_int128::{secp256k1_fe_mul_inner, secp256k1_fe_sqr_inner};
 use crate::secp256k1::modinv64::*;
 
+#[derive(Clone)]
 pub struct secp256k1_fe {
      /* X = sum(i=0..4, n[i]*2^(i*52)) mod p
       * where p = 2^256 - 0x1000003D1
@@ -65,6 +66,12 @@ pub struct secp256k1_fe_storage {
 }
 
 impl secp256k1_fe_storage {
+    pub fn new() -> secp256k1_fe_storage {
+        secp256k1_fe_storage {
+            n: [0u64; 4]
+        }
+    }
+
     pub fn copy_from_u8slice(&mut self, slice: &[u8]) {
         self.n[0] = slice[0] as u64
             | ((slice[1] as u64) << 8)

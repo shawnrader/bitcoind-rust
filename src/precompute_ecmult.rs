@@ -14,7 +14,6 @@ use crate::secp256k1::group::*;
 use crate::secp256k1::ecmult_gen::ECMULT_WINDOW_SIZE;
 
 // Placeholder types and constants for the Rust version
-type secp256k1_ge_storage = [u32; 16];
 const ECMULT_TABLE_SIZE: fn(usize) -> usize = |i| 1 << (i - 2);
 //const ECMULT_WINDOW_SIZE: usize = 15;
 
@@ -28,9 +27,10 @@ fn secp256k1_ecmult_compute_table(table: &mut [secp256k1_ge_storage], window_g: 
     let mut gj = *gen;  // Assuming Gej implements Copy or we need a clone method
     let mut ge = secp256k1_ge::new();  // Assuming default constructor or appropriate initialization
     let mut dgen = secp256k1_ge::new();
+    let mut r: secp256k1_ge_storage = secp256k1_ge_storage::new();
 
     secp256k1_ge_set_gej_var(&mut ge, &gj);
-    secp256k1_ge_to_storage(&mut table[0], &ge);
+    secp256k1_ge_to_storage(&mut r, &ge);
 
     secp256k1_gej_double_var(&mut gj, gen, None);
     secp256k1_ge_set_gej_var(&mut dgen, &gj);

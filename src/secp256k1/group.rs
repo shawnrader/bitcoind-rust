@@ -14,6 +14,7 @@ use super::ecmult_gen::{secp256k1_fe_one, secp256k1_const_beta};
  *  or occasionally on an isomorphic curve of the form y^2 = x^3 + 7*t^6.
  *  Note: For exhaustive test mode, secp256k1 is replaced by a small subgroup of a different curve.
  */
+#[derive(Clone)]
 pub struct secp256k1_ge {
     pub x: secp256k1_fe,
     pub y: secp256k1_fe,
@@ -43,11 +44,12 @@ fn SECP256K1_GE_CONST_INFINITY() -> secp256k1_ge { secp256k1_ge {x: SECP256K1_FE
 /** A group element of the secp256k1 curve, in jacobian coordinates.
  *  Note: For exhastive test mode, sepc256k1 is replaced by a small subgroup of a different curve.
  */
+#[derive(Clone)]
 pub struct secp256k1_gej {
-    x: secp256k1_fe, /* actual X: x/z^2 */
-    y: secp256k1_fe, /* actual Y: y/z^3 */
-    z: secp256k1_fe,
-    infinity: i32, /* whether this represents the point at infinity */
+    pub x: secp256k1_fe, /* actual X: x/z^2 */
+    pub y: secp256k1_fe, /* actual Y: y/z^3 */
+    pub z: secp256k1_fe,
+    pub infinity: i32, /* whether this represents the point at infinity */
 }
 
 impl secp256k1_gej {
@@ -84,7 +86,15 @@ pub struct secp256k1_ge_storage {
     pub y: secp256k1_fe_storage,
 }
 
+
 impl secp256k1_ge_storage {
+    pub fn new() -> secp256k1_ge_storage {
+        secp256k1_ge_storage {
+            x: secp256k1_fe_storage::new(),
+            y: secp256k1_fe_storage::new(),
+        }
+    }
+
     pub fn to_array(self) -> [u8; 64] {
         let mut ret = [0u8; 64];
         ret[..32].copy_from_slice(&self.x.to_slice());
@@ -568,9 +578,8 @@ pub fn secp256k1_gej_add_ge_var(r: &mut secp256k1_gej, a: &secp256k1_gej, b: &se
         return;
     }
     if b.infinity != 0 {
-        match rzr {
-            Some(rzr_val) => secp256k1_fe_set_int(rzr_val, 1),
-            None => break,
+        if let Some(rzr_val) = rzr {
+            secp256k1_fe_set_int(rzr_val, 1);
         }
         *r = *a;
         return;
@@ -585,21 +594,20 @@ pub fn secp256k1_gej_add_ge_var(r: &mut secp256k1_gej, a: &secp256k1_gej, b: &se
     secp256k1_fe_negate(&mut i, &s2, 1); secp256k1_fe_add(&mut i, &s1);
     if (secp256k1_fe_normalizes_to_zero_var(&h) != 0) {
         if (secp256k1_fe_normalizes_to_zero_var(&i) != 0) {
-            secp256k1_gej_double_var(r, a, Some(rzr));
+            secp256k1_gej_double_var(r, a, rzr);
         } else {
-            //if (rzr != NULL) {
-                secp256k1_fe_set_int(rzr, 0);
-            //}
+            if let Some(rzr_val) = rzr {
+                secp256k1_fe_set_int(rzr_val, 0);
+            }
             secp256k1_gej_set_infinity(r);
         }
         return;
     }
 
     r.infinity = 0;
-    // TODO: make option?
-    //if (rzr != NULL) {
-        *rzr = h;
-    //}
+    if let Some(rzr_ptr) = rzr {
+        *rzr_ptr = h;
+    }
     secp256k1_fe_mul(&mut r.z, &a.z, &h);
 
     secp256k1_fe_sqr(&mut h2, &h);
