@@ -50,77 +50,102 @@ pub fn secp256k1_fe_sqrt(r: &mut secp256k1_fe, a: &secp256k1_fe) -> i32 {
      */
 
     secp256k1_fe_sqr(&mut x2, a);
-    secp256k1_fe_mul(&mut x2, &x2, a);
+    let x2_clone = x2.clone();
+    secp256k1_fe_mul(&mut x2, &x2_clone, a);
 
     secp256k1_fe_sqr(&mut x3, &x2);
-    secp256k1_fe_mul(&mut x3, &x3, a);
+    let x3_clone = x3.clone();
+    secp256k1_fe_mul(&mut x3, &x3_clone, a);
 
-    x6 = x3;
+    x6 = x3.clone();
     for j in [0..3] {
-        secp256k1_fe_sqr(&mut x6, &x6);
+        let x6_clone = x6.clone();
+        secp256k1_fe_sqr(&mut x6, &x6_clone);
     }
-    secp256k1_fe_mul(&mut x6, &x6, &x3);
+    let x6_clone = x6.clone();
+    secp256k1_fe_mul(&mut x6, &x6_clone, &x3);
 
-    x9 = x6;
+    x9 = x6.clone();
     for j in [0..3] {
-        secp256k1_fe_sqr(&mut x9, &x9);
+        let x9_clone = x9.clone();
+        secp256k1_fe_sqr(&mut x9, &x9_clone);
     }
-    secp256k1_fe_mul(&mut x9, &x9, &x3);
+    let x9_clone = x9.clone();
+    secp256k1_fe_mul(&mut x9, &x9_clone, &x3);
 
-    x11 = x9;
+    x11 = x9.clone();
     for j in [0..2] {
-        secp256k1_fe_sqr(&mut x11, &x11);
+        let x11_clone = x11.clone();
+        secp256k1_fe_sqr(&mut x11, &x11_clone);
     }
-    secp256k1_fe_mul(&mut x11, &x11, &x2);
+    let x11_clone = x11.clone();
+    secp256k1_fe_mul(&mut x11, &x11_clone, &x2);
 
-    x22 = x11;
+    x22 = x11.clone();
     for j in [0..11] {
-        secp256k1_fe_sqr(&mut x22, &x22);
+        let x22_clone = x22.clone();
+        secp256k1_fe_sqr(&mut x22, &x22_clone);
     }
-    secp256k1_fe_mul(&mut x22, &x22, &x11);
+    let x22_clone = x22.clone();
+    secp256k1_fe_mul(&mut x22, &x22_clone, &x11);
 
-    x44 = x22;
+    x44 = x22.clone();
     for j in [0..22] {
-        secp256k1_fe_sqr(&mut x44, &x44);
+        let x44_clone = x44.clone();
+        secp256k1_fe_sqr(&mut x44, &x44_clone);
     }
-    secp256k1_fe_mul(&mut x44, &x44, &x22);
+    let x44_clone = x44.clone();
+    secp256k1_fe_mul(&mut x44, &x44_clone, &x22);
 
-    x88 = x44;
+    x88 = x44.clone();
     for j in [0..44] {
-        secp256k1_fe_sqr(&mut x88, &x88);
+        let x88_clone = x88.clone();
+        secp256k1_fe_sqr(&mut x88, &x88_clone);
     }
-    secp256k1_fe_mul(&mut x88, &x88, &x44);
+    let x88_clone = x88.clone();
+    secp256k1_fe_mul(&mut x88, &x88_clone, &x44);
 
-    x176 = x88;
+    x176 = x88.clone();
     for j in [0..88] {
-        secp256k1_fe_sqr(&mut x176, &x176);
+        let x176_clone = x176.clone();
+        secp256k1_fe_sqr(&mut x176, &x176_clone);
     }
-    secp256k1_fe_mul(&mut x176, &x176, &x88);
+    let x176_clone = x176.clone();
+    secp256k1_fe_mul(&mut x176, &x176_clone, &x88);
 
-    x220 = x176;
+    x220 = x176.clone();
     for j in [0..44] {
-        secp256k1_fe_sqr(&mut x220, &x220);
+        let x220_clone = x220.clone();
+        secp256k1_fe_sqr(&mut x220, &x220_clone);
     }
-    secp256k1_fe_mul(&mut x220, &x220, &x44);
+    let x220_clone = x220.clone();
+    secp256k1_fe_mul(&mut x220, &x220_clone, &x44);
 
-    x223 = x220;
+    x223 = x220.clone();
     for j in [0..3] {
-        secp256k1_fe_sqr(&mut x223, &x223);
+        let x223_clone = x223.clone();
+        secp256k1_fe_sqr(&mut x223, &x223_clone);
     }
-    secp256k1_fe_mul(&mut x223, &x223, &x3);
+    let x223_clone = x223.clone();
+    secp256k1_fe_mul(&mut x223, &x223_clone, &x3);
 
     /* The final result is then assembled using a sliding window over the blocks. */
 
-    t1 = x223;
+    t1 = x223.clone();
     for j in [0..23] {
-        secp256k1_fe_sqr(&mut t1, &t1);
+        let t1_clone = t1.clone();
+        secp256k1_fe_sqr(&mut t1, &t1_clone);
     }
-    secp256k1_fe_mul(&mut t1, &t1, &x22);
+    let t1_clone = t1.clone();
+    secp256k1_fe_mul(&mut t1, &t1_clone, &x22);
     for j in [0..6] {
-        secp256k1_fe_sqr(&mut t1, &t1);
+        let t1_clone = t1.clone();
+        secp256k1_fe_sqr(&mut t1, &t1_clone);
     }
-    secp256k1_fe_mul(&mut t1, &t1, &x2);
-    secp256k1_fe_sqr(&mut t1, &t1);
+    let t1_clone = t1.clone();
+    secp256k1_fe_mul(&mut t1, &t1_clone, &x2);
+    let t1_clone = t1.clone();
+    secp256k1_fe_sqr(&mut t1, &t1_clone);
     secp256k1_fe_sqr(r, &t1);
 
     /* Check that a square root was actually calculated */

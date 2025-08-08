@@ -37,30 +37,62 @@ impl secp256k1_fe {
 }
  
  /* Unpacks a constant into a overlapping multi-limbed FE element. */
- fn SECP256K1_FE_CONST_INNER(d7: u64, d6: u64, d5: u64, d4: u64, d3: u64, d2: u64, d1: u64, d0: u64) -> [u64; 5] {
-    [(d0) | ((d1 & 0xFFFFF_u64) << 32), 
-    (d1 >> 20) | (d2 << 12) | ((d3 & 0xFFu64) << 44),
-    (d3 >> 8) | ((d4 & 0xFFFFFFF_u64) << 24),
-    (d4 >> 28) | (d5 << 4) | ((d6 & 0xFFFF_u64) << 36),
-    (d6 >> 16) | (d7 << 16)]
- }
+//  fn SECP256K1_FE_CONST_INNER(d7: u64, d6: u64, d5: u64, d4: u64, d3: u64, d2: u64, d1: u64, d0: u64) -> [u64; 5] {
+//     [(d0) | ((d1 & 0xFFFFF_u64) << 32), 
+//     (d1 >> 20) | (d2 << 12) | ((d3 & 0xFFu64) << 44),
+//     (d3 >> 8) | ((d4 & 0xFFFFFFF_u64) << 24),
+//     (d4 >> 28) | (d5 << 4) | ((d6 & 0xFFFF_u64) << 36),
+//     (d6 >> 16) | (d7 << 16)]
+//  }
  
+#[macro_export]
+macro_rules! SECP256K1_FE_CONST_INNER {
+    ($d7:expr, $d6:expr, $d5:expr, $d4:expr, $d3:expr, $d2:expr, $d1:expr, $d0:expr) => {
+        [
+            ($d0) | (($d1 & 0xFFFFF_u64) << 32),
+            ($d1 >> 20) | ($d2 << 12) | (($d3 & 0xFF_u64) << 44),
+            ($d3 >> 8) | (($d4 & 0x0FFFFFFF_u64) << 24),
+            ($d4 >> 28) | ($d5 << 4) | (($d6 & 0xFFFF_u64) << 36),
+            ($d6 >> 16) | ($d7 << 16),
+        ]
+    };
+}
+
 #[cfg(feature = "verify")]
 pub fn SECP256K1_FE_CONST(d7: u64, d6: u64, d5: u64, d4: u64, d3: u64, d2: u64, d1: u64, d0: u64) -> secp256k1_fe {
     secp256k1_fe { 
-        n: SECP256K1_FE_CONST_INNER((d7), (d6), (d5), (d4), (d3), (d2), (d1), (d0)),
+        n: SECP256K1_FE_CONST_INNER!((d7), (d6), (d5), (d4), (d3), (d2), (d1), (d0)),
         magnitude: 1,
         normalized: 1
     }
 }
  
-#[cfg(not (feature = "verify"))]
-pub fn SECP256K1_FE_CONST(d7: u32, d6: u32, d5: u32, d4: u32, d3: u32, d2: u32, d1: u32, d0: u32) -> secp256k1_fe {
-    secp256k1_fe { 
-        n: SECP256K1_FE_CONST_INNER(d7 as u64, d6 as u64, d5 as u64, d4 as u64, d3 as u64, d2 as u64, d1 as u64, d0 as u64)
-    }
+// #[cfg(not (feature = "verify"))]
+// pub fn SECP256K1_FE_CONST(d7: u32, d6: u32, d5: u32, d4: u32, d3: u32, d2: u32, d1: u32, d0: u32) -> secp256k1_fe {
+//     secp256k1_fe { 
+//         n: SECP256K1_FE_CONST_INNER!(d7 as u64, d6 as u64, d5 as u64, d4 as u64, d3 as u64, d2 as u64, d1 as u64, d0 as u64)
+//     }
+// }
+#[macro_export]
+macro_rules! SECP256K1_FE_CONST {
+    ($d7:expr, $d6:expr, $d5:expr, $d4:expr, $d3:expr, $d2:expr, $d1:expr, $d0:expr) => {
+        secp256k1_fe {
+            n: $crate::SECP256K1_FE_CONST_INNER!(
+                $d7 as u64,
+                $d6 as u64,
+                $d5 as u64,
+                $d4 as u64,
+                $d3 as u64,
+                $d2 as u64,
+                $d1 as u64,
+                $d0 as u64
+            ),
+        }
+    };
 }
 
+
+#[derive(Clone)]
 pub struct secp256k1_fe_storage {
     pub n: [u64; 4],
 }
@@ -145,29 +177,6 @@ impl secp256k1_fe_storage {
     }
 }
  
-pub fn SECP256K1_FE_STORAGE_CONST(d7: u64, d6: u64, d5: u64, d4: u64, d3: u64, d2: u64, d1: u64, d0: u64) -> secp256k1_fe_storage {
-    secp256k1_fe_storage {
-        n : [(d0) | ((d1 as u64) << 32),
-             (d2) | ((d3 as u64) << 32),
-             (d4) | ((d5 as u64) << 32),
-             (d6) | ((d7 as u64) << 32),
-        ]
-    }
-}
-
-// #[macro_export] 
-// macro_rules! SECP256K1_FE_STORAGE_CONST {
-//     ($d0:expr, $d1:expr, $d2:expr, $d3:expr, $d4:expr, $d5:expr, $d6:expr, $d7:expr) => {
-//         secp256k1_fe_storage {
-//             n : [($d0) | (($d1 as u64) << 32),
-//                  ($d2) | (($d3 as u64) << 32),
-//                  ($d4) | (($d5 as u64) << 32),
-//                  ($d6) | (($d7 as u64) << 32),
-//             ]
-//         }
-//     }
-// }
-
 
 #[macro_export] 
 macro_rules! SECP256K1_FE_STORAGE_CONST_GET {
@@ -179,6 +188,19 @@ macro_rules! SECP256K1_FE_STORAGE_CONST_GET {
     }
 }
 
+#[macro_export]
+macro_rules! SECP256K1_FE_STORAGE_CONST {
+    ($d7:expr, $d6:expr, $d5:expr, $d4:expr, $d3:expr, $d2:expr, $d1:expr, $d0:expr) => {
+        $crate::secp256k1::field_5x52::secp256k1_fe_storage {
+            n: [
+                ($d0) | (($d1 as u64) << 32),
+                ($d2) | (($d3 as u64) << 32),
+                ($d4) | (($d5 as u64) << 32),
+                ($d6) | (($d7 as u64) << 32),
+            ],
+        }
+    };
+}
 /** Implements arithmetic modulo FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFE FFFFFC2F,
  *  represented as 5 uint64_t's in base 2^52, least significant first. Note that the limbs are allowed to
  *  contain >52 bits each.
@@ -548,7 +570,7 @@ pub fn secp256k1_fe_set_b32(r: &mut secp256k1_fe, a: &[u8]) -> i32 {
  }
  
  /** Convert a field element to a 32-byte big endian value. Requires the input to be normalized */
-pub fn secp256k1_fe_get_b32(r: &[u8], a: &secp256k1_fe) {
+pub fn secp256k1_fe_get_b32(r: &mut [u8], a: &secp256k1_fe) {
 
 #[cfg(feature = "verify")] {
      VERIFY_CHECK(a.normalized);
@@ -649,7 +671,7 @@ pub fn secp256k1_fe_mul(r: &mut secp256k1_fe, a: &secp256k1_fe, b: &secp256k1_fe
         VERIFY_CHECK(r != b);
         VERIFY_CHECK(a != b);
     }
-    secp256k1_fe_mul_inner(r.n.as_mut_slice(), a.n.as_mut_slice(), b.n.as_mut_slice());
+    secp256k1_fe_mul_inner(r.n.as_mut_slice(), a.n.as_slice(), b.n.as_slice());
     #[cfg(feature = "verify")] {
         r.magnitude = 1;
         r.normalized = 0;
@@ -663,7 +685,7 @@ pub fn secp256k1_fe_sqr(r: &mut secp256k1_fe, a: &secp256k1_fe) {
         VERIFY_CHECK(a.magnitude <= 8);
         secp256k1_fe_verify(a);
     }
-    secp256k1_fe_sqr_inner(r.n.as_mut_slice(), a.n.as_mut_slice());
+    secp256k1_fe_sqr_inner(r.n.as_mut_slice(), a.n.as_slice());
     #[cfg(feature = "verify")] {
         r.magnitude = 1;
         r.normalized = 0;
@@ -857,12 +879,12 @@ pub fn secp256k1_fe_inv(r: &mut secp256k1_fe, x: &secp256k1_fe) {
     //secp256k1_fe tmp;
     let mut tmp: secp256k1_fe;
     // secp256k1_modinv64_signed62 s;
-    let mut s: secp256k1_modinv64_signed62;
+    let mut s = secp256k1_modinv64_signed62 { v: [0, 0, 0, 0, 0]};
 
-    tmp = *x;
+    tmp = x.clone();
     secp256k1_fe_normalize(&mut tmp);
     secp256k1_fe_to_signed62(&mut s, &tmp);
-    secp256k1_modinv64(&mut s, &secp256k1_const_modinfo_fe);
+    secp256k1_modinv64(&mut s, &mut secp256k1_const_modinfo_fe);
     secp256k1_fe_from_signed62(r, &s);
  
     #[cfg(feature = "verify")] {
@@ -872,9 +894,9 @@ pub fn secp256k1_fe_inv(r: &mut secp256k1_fe, x: &secp256k1_fe) {
  
 pub fn secp256k1_fe_inv_var(r: &mut secp256k1_fe, x: &secp256k1_fe) {
     let mut tmp: secp256k1_fe;
-    let mut s: secp256k1_modinv64_signed62;
+    let mut s = secp256k1_modinv64_signed62 { v: [0, 0, 0, 0, 0]};
 
-    tmp = *x;
+    tmp = x.clone();
     secp256k1_fe_normalize_var(&mut tmp);
     secp256k1_fe_to_signed62(&mut s, &tmp);
     secp256k1_modinv64_var(&mut s, &secp256k1_const_modinfo_fe);

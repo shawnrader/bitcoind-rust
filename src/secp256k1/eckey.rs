@@ -91,7 +91,8 @@ pub fn secp256k1_eckey_pubkey_serialize(elem: &mut secp256k1_ge, pubkey: &mut [u
 // }
 
 pub fn secp256k1_eckey_privkey_tweak_add(key: &mut secp256k1_scalar, tweak: &secp256k1_scalar) -> bool {
-    secp256k1_scalar_add(key, key, tweak);
+    let key2 = key.clone();
+    secp256k1_scalar_add(key, &key2, tweak);
     return secp256k1_scalar_is_zero(key) == 0;
 }
 
@@ -109,17 +110,18 @@ pub fn secp256k1_eckey_privkey_tweak_add(key: &mut secp256k1_scalar, tweak: &sec
 //     return 1;
 // }
 
-pub fn secp256k1_eckey_pubkey_tweak_add(key: &mut secp256k1_ge, tweak: &secp256k1_scalar) -> i32 {
+pub fn secp256k1_eckey_pubkey_tweak_add(key: &mut secp256k1_ge, tweak: &[secp256k1_scalar]) -> i32 {
     let mut pt = secp256k1_gej::new();
     let mut one = secp256k1_scalar::new();
     secp256k1_gej_set_ge(&mut pt, key);
     secp256k1_scalar_set_int(&mut one, 1);
-    secp256k1_ecmult(&mut pt, &pt, &one, tweak);
+    let mut pt2 = pt.clone();
+    secp256k1_ecmult(&mut pt, &mut pt2, &one, tweak);
 
     if secp256k1_gej_is_infinity(&pt) != 0 {
         return 0;
     }
-    secp256k1_ge_set_gej(key, &pt);
+    secp256k1_ge_set_gej(key, &mut pt);
     return 1;
 }
 
@@ -133,8 +135,9 @@ pub fn secp256k1_eckey_pubkey_tweak_add(key: &mut secp256k1_ge, tweak: &secp256k
 
 pub fn secp256k1_eckey_privkey_tweak_mul(key: &mut secp256k1_scalar, tweak: &secp256k1_scalar) -> i32 {
     let ret = !secp256k1_scalar_is_zero(tweak);
+    let key2 = key.clone();
 
-    secp256k1_scalar_mul(key, key, tweak);
+    secp256k1_scalar_mul(key, &key2, tweak);
     return ret;
 }
 
@@ -152,16 +155,17 @@ pub fn secp256k1_eckey_privkey_tweak_mul(key: &mut secp256k1_scalar, tweak: &sec
 //     return 1;
 // }
 
-pub fn secp256k1_eckey_pubkey_tweak_mul(key: &mut secp256k1_ge, tweak: &secp256k1_scalar) -> i32 {
+pub fn secp256k1_eckey_pubkey_tweak_mul(key: &mut secp256k1_ge, tweak: &[secp256k1_scalar]) -> i32 {
     let mut zero = secp256k1_scalar::new();
     let mut pt = secp256k1_gej::new();
-    if secp256k1_scalar_is_zero(tweak) != 0 {
+    if secp256k1_scalar_is_zero(&tweak[0]) != 0 {
         return 0;
     }
 
     secp256k1_scalar_set_int(&mut zero, 0);
     secp256k1_gej_set_ge(&mut pt, key);
-    secp256k1_ecmult(&mut pt, &pt, tweak, &zero);
-    secp256k1_ge_set_gej(key, &pt);
+    let mut pt2 = pt.clone();
+    secp256k1_ecmult(&mut pt, &mut pt2, &tweak[0], &[zero]);
+    secp256k1_ge_set_gej(key, &mut pt);
     return 1;
 }

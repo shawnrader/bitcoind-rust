@@ -2,8 +2,17 @@
 // typedef struct {
 //     int64_t v[5];
 // } secp256k1_modinv64_signed62;
+#[derive(Clone)]
 pub struct secp256k1_modinv64_signed62 {
     pub v: [i64; 5],
+}
+
+impl secp256k1_modinv64_signed62 {
+    pub fn new () -> Self {
+        Self {
+            v: [0i64; 5]
+        }
+    }
 }
 
 pub struct secp256k1_modinv64_modinfo {
@@ -228,7 +237,8 @@ fn secp256k1_modinv64_divsteps_62_var(mut eta: i64, f0: u64, g0: u64, t: &mut se
                 VERIFY_CHECK(limit > 0 && limit <= 62);
             }
             m = (u64::MAX >> (64 - limit)) & 63;
-            w = ((f * g * (f * f - 2)) & m) as u32;
+            //w = ((f * g * (f * f - 2)) & m) as u32;
+            w = ((f.wrapping_mul(g).wrapping_mul((f.wrapping_mul(f)).wrapping_sub(2))) & m) as u32;
         } else {
             limit = if ((eta + 1) as i32 > i as i32) { i } else { (eta + 1) as i32};
             #[cfg(feature = "verify")] VERIFY_CHECK(limit > 0 && limit <= 62);
@@ -450,12 +460,12 @@ fn secp256k1_modinv64_update_fg_62_var(len: usize, f: &mut secp256k1_modinv64_si
 }
 
 /* Compute the inverse of x modulo modinfo->modulus, and replace x with it (constant time in x). */
-pub fn secp256k1_modinv64(x: &mut secp256k1_modinv64_signed62, modinfo: &secp256k1_modinv64_modinfo) {
+pub fn secp256k1_modinv64(x: &mut secp256k1_modinv64_signed62, modinfo: &mut secp256k1_modinv64_modinfo) {
     /* Start with d=0, e=1, f=modulus, g=x, zeta=-1. */
     let mut d: secp256k1_modinv64_signed62 = secp256k1_modinv64_signed62 { v: [0; 5] };
     let mut e: secp256k1_modinv64_signed62 = secp256k1_modinv64_signed62 { v: [1, 0, 0, 0, 0] };
-    let mut f: secp256k1_modinv64_signed62 = modinfo.modulus;
-    let mut g: secp256k1_modinv64_signed62 = *x;
+    let mut f: secp256k1_modinv64_signed62 = modinfo.modulus.clone();
+    let mut g: secp256k1_modinv64_signed62 = x.clone();
     let mut i: i32;
     let mut zeta: i64 = -1; /* zeta = -(delta+1/2); delta starts at 1/2. */
 
@@ -505,8 +515,8 @@ pub fn secp256k1_modinv64_var(x: &mut secp256k1_modinv64_signed62, modinfo: &sec
     /* Start with d=0, e=1, f=modulus, g=x, eta=-1. */
     let mut d: secp256k1_modinv64_signed62 = secp256k1_modinv64_signed62 { v: [0; 5] };
     let mut e: secp256k1_modinv64_signed62 = secp256k1_modinv64_signed62 { v: [1, 0, 0, 0, 0] };
-    let mut f: secp256k1_modinv64_signed62 = modinfo.modulus;
-    let mut g: secp256k1_modinv64_signed62 = *x;
+    let mut f: secp256k1_modinv64_signed62 = modinfo.modulus.clone();
+    let mut g: secp256k1_modinv64_signed62 = x.clone();
 
     #[cfg(feature = "verify")] let i = 0;
     let mut j: usize;

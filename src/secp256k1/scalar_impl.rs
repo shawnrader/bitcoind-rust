@@ -7,15 +7,15 @@ use crate::secp256k1::scalar_4x64::{
     secp256k1_scalar_mul,
     secp256k1_scalar_add,
     secp256k1_scalar_negate,
-    SECP256K1_SCALAR_CONST,
     secp256k1_scalar_set_b32,
     secp256k1_scalar_is_zero,
 };
+use crate::SECP256K1_SCALAR_CONST;
 
 
 
-pub const secp256k1_scalar_one: secp256k1_scalar = SECP256K1_SCALAR_CONST(0, 0, 0, 0, 0, 0, 0, 1);
-pub const secp256k1_scalar_zero: secp256k1_scalar = SECP256K1_SCALAR_CONST(0, 0, 0, 0, 0, 0, 0, 0);
+pub const secp256k1_scalar_one: secp256k1_scalar = SECP256K1_SCALAR_CONST!(0, 0, 0, 0, 0, 0, 0, 1);
+pub const secp256k1_scalar_zero: secp256k1_scalar = SECP256K1_SCALAR_CONST!(0, 0, 0, 0, 0, 0, 0, 0);
 
 
 pub fn secp256k1_scalar_set_b32_seckey(r: &mut secp256k1_scalar, bin: &[u8; 32]) -> i32 {
@@ -24,7 +24,7 @@ pub fn secp256k1_scalar_set_b32_seckey(r: &mut secp256k1_scalar, bin: &[u8; 32])
     return ((overflow == 0) && secp256k1_scalar_is_zero(r) == 0) as i32;
 }
 
-pub const secp256k1_const_lambda: secp256k1_scalar = SECP256K1_SCALAR_CONST( 
+pub const secp256k1_const_lambda: secp256k1_scalar = SECP256K1_SCALAR_CONST!( 
     0x5363AD4C, 0xC05C30E0, 0xA5261C02, 0x8812645A,
     0x122E22EA, 0x20816678, 0xDF02967C, 0x1B23BD72
 );
@@ -87,25 +87,10 @@ pub fn secp256k1_scalar_split_lambda(
     let mut c1 = secp256k1_scalar::new();
     let mut c2 = secp256k1_scalar::new();
 
-    static MINUS_B1: secp256k1_scalar = SECP256K1_SCALAR_CONST(
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0xE4437ED6, 0x010E8828, 0x6F547FA9, 0x0ABFE4C3,
-    );
-
-    static MINUS_B2: secp256k1_scalar = SECP256K1_SCALAR_CONST(
-        0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFE,
-        0x8A280AC5, 0x0774346D, 0xD765CDA8, 0x3DB1562C,
-    );
-
-    static G1: secp256k1_scalar = SECP256K1_SCALAR_CONST(
-        0x3086D221, 0xA7D46BCD, 0xE86C90E4, 0x9284EB15,
-        0x3DAA8A14, 0x71E8CA7F, 0xE893209A, 0x45DBB031,
-    );
-
-    static G2: secp256k1_scalar = SECP256K1_SCALAR_CONST(
-        0xE4437ED6, 0x010E8828, 0x6F547FA9, 0x0ABFE4C4,
-        0x221208AC, 0x9DF506C6, 0x1571B4AE, 0x8AC47F71,
-    );
+    let MINUS_B1: secp256k1_scalar = SECP256K1_SCALAR_CONST!(0x00000000, 0x00000000, 0x00000000, 0x00000000, 0xE4437ED6, 0x010E8828, 0x6F547FA9, 0x0ABFE4C3);
+    let MINUS_B2: secp256k1_scalar = SECP256K1_SCALAR_CONST!(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFE, 0x8A280AC5, 0x0774346D, 0xD765CDA8, 0x3DB1562C);
+    let G1: secp256k1_scalar = SECP256K1_SCALAR_CONST!(0x3086D221, 0xA7D46BCD, 0xE86C90E4, 0x9284EB15, 0x3DAA8A14, 0x71E8CA7F, 0xE893209A, 0x45DBB031);
+    let G2: secp256k1_scalar = SECP256K1_SCALAR_CONST!(0xE4437ED6, 0x010E8828, 0x6F547FA9, 0x0ABFE4C4, 0x221208AC, 0x9DF506C6, 0x1571B4AE, 0x8AC47F71);
 
     debug_assert!(r1 as *const _ != k as *const _, "r1 != k check failed");
     debug_assert!(r2 as *const _ != k as *const _, "r2 != k check failed");
@@ -114,15 +99,16 @@ pub fn secp256k1_scalar_split_lambda(
     // these _var calls are constant time since the shift amount is constant
     secp256k1_scalar_mul_shift_var(&mut c1, k, &G1, 384);
     secp256k1_scalar_mul_shift_var(&mut c2, k, &G2, 384);
-    secp256k1_scalar_mul(&mut c1, &c1, &MINUS_B1);
-    secp256k1_scalar_mul(&mut c2, &c2, &MINUS_B2);
+    let c1_clone = c1.clone();
+    secp256k1_scalar_mul(&mut c1, &c1_clone, &MINUS_B1);
+    let c2_clone = c2.clone();
+    secp256k1_scalar_mul(&mut c2, &c2_clone, &MINUS_B2);
     secp256k1_scalar_add(r2, &c1, &c2);
     secp256k1_scalar_mul(r1, r2, &secp256k1_const_lambda);
-    secp256k1_scalar_negate(r1, r1);
-    secp256k1_scalar_add(r1, r1, k);
-
-    debug_assert!(r1.is_valid(), "SECP256K1_SCALAR_VERIFY failed");
-    debug_assert!(r2.is_valid(), "SECP256K1_SCALAR_VERIFY failed");
+    let r1_clone = r1.clone();
+    secp256k1_scalar_negate(r1, &r1_clone);
+    let r1_clone = r1.clone();
+    secp256k1_scalar_add(r1, &r1_clone, k);
 
     #[cfg(feature = "verify")]
     secp256k1_scalar_split_lambda_verify(r1, r2, k);

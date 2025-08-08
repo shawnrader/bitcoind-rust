@@ -14,9 +14,9 @@
 // } secp256k1_sha256;
 
 pub struct secp256k1_sha256 {
-    s: [u32; 8],
-    buf: [u8; 64],
-    bytes: u64,
+    pub s: [u32; 8],
+    pub buf: [u8; 64],
+    pub bytes: u64,
 }
  
 
@@ -31,6 +31,23 @@ pub struct secp256k1_sha256 {
 pub struct secp256k1_hmac_sha256 {
     inner: secp256k1_sha256,
     outer: secp256k1_sha256,
+}
+
+impl secp256k1_hmac_sha256 {
+    pub fn new () -> Self {
+        Self {
+            inner: secp256k1_sha256 {
+                s: [0u32; 8],
+                buf: [0u8; 64],
+                bytes: 0,
+            },
+            outer: secp256k1_sha256 {
+                s: [0u32; 8],
+                buf: [0u8; 64],
+                bytes: 0,
+            },
+        }
+    }
 }
  
 //  static void secp256k1_hmac_sha256_initialize(secp256k1_hmac_sha256 *hash, const unsigned char *key, size_t size);
@@ -47,6 +64,16 @@ pub struct secp256k1_rfc6979_hmac_sha256 {
     v: [u8; 32],
     k: [u8; 32],
     retry: bool,
+}
+
+impl secp256k1_rfc6979_hmac_sha256 {
+    pub fn new() -> Self {
+        Self {
+            v: [0u8; 32],
+            k: [0u8; 32],
+            retry: false,
+        }
+    }
 }
  
 //  static void secp256k1_rfc6979_hmac_sha256_initialize(secp256k1_rfc6979_hmac_sha256 *rng, const unsigned char *key, size_t keylen);
@@ -504,7 +531,7 @@ pub fn secp256k1_hmac_sha256_finalize(hash: &mut secp256k1_hmac_sha256, out32: &
 //     rng->retry = 0;
 // }
 pub fn secp256k1_rfc6979_hmac_sha256_initialize(rng: &mut secp256k1_rfc6979_hmac_sha256, key: &[u8]) {
-    let mut hmac: secp256k1_hmac_sha256;
+    let mut hmac = secp256k1_hmac_sha256::new();
     static ZERO: [u8; 1] = [0x00];
     static ONE: [u8; 1] = [0x01];
 
@@ -565,11 +592,11 @@ pub fn secp256k1_rfc6979_hmac_sha256_initialize(rng: &mut secp256k1_rfc6979_hmac
 //     rng->retry = 1;
 // }
 
-pub fn secp256k1_rfc6979_hmac_sha256_generate(rng: &secp256k1_rfc6979_hmac_sha256, out: &mut [u8]) {
+pub fn secp256k1_rfc6979_hmac_sha256_generate(rng: &mut secp256k1_rfc6979_hmac_sha256, out: &mut [u8]) {
     /* RFC6979 3.2.h. */
     static ZERO: [u8; 1] = [0x00];
     if rng.retry {
-        let mut hmac: secp256k1_hmac_sha256;
+        let mut hmac = secp256k1_hmac_sha256::new();
         secp256k1_hmac_sha256_initialize(&mut hmac, &rng.k);
         secp256k1_hmac_sha256_write(&mut hmac, &rng.v);
         secp256k1_hmac_sha256_write(&mut hmac, &ZERO);
@@ -582,7 +609,7 @@ pub fn secp256k1_rfc6979_hmac_sha256_generate(rng: &secp256k1_rfc6979_hmac_sha25
     let mut i = 0;
     let mut outlen = out.len();
     while outlen > 0 {
-        let mut hmac: secp256k1_hmac_sha256;
+        let mut hmac = secp256k1_hmac_sha256::new();
         let mut now = outlen;
         secp256k1_hmac_sha256_initialize(&mut hmac, &rng.k);
         secp256k1_hmac_sha256_write(&mut hmac, &rng.v);

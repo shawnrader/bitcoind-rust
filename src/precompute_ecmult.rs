@@ -12,34 +12,33 @@ use std::io::{self, Write};
 
 use crate::secp256k1::group::*;
 use crate::secp256k1::ecmult_gen::ECMULT_WINDOW_SIZE;
+//use crate::SECP256K1_G;
 
 // Placeholder types and constants for the Rust version
 const ECMULT_TABLE_SIZE: fn(usize) -> usize = |i| 1 << (i - 2);
 //const ECMULT_WINDOW_SIZE: usize = 15;
 
-// Placeholder for the secp256k1_ge_const_g type
-struct Secp256k1Ge;
-static SECP256K1_GE_CONST_G: Secp256k1Ge = Secp256k1Ge;
 
 
 // Function to compute a single table
 fn secp256k1_ecmult_compute_table(table: &mut [secp256k1_ge_storage], window_g: i32, gen: &secp256k1_gej) {
-    let mut gj = *gen;  // Assuming Gej implements Copy or we need a clone method
+    let mut gj = gen.clone();  // Assuming Gej implements Copy or we need a clone method
     let mut ge = secp256k1_ge::new();  // Assuming default constructor or appropriate initialization
     let mut dgen = secp256k1_ge::new();
     let mut r: secp256k1_ge_storage = secp256k1_ge_storage::new();
 
-    secp256k1_ge_set_gej_var(&mut ge, &gj);
+    secp256k1_ge_set_gej_var(&mut ge, &mut gj);
     secp256k1_ge_to_storage(&mut r, &ge);
 
     secp256k1_gej_double_var(&mut gj, gen, None);
-    secp256k1_ge_set_gej_var(&mut dgen, &gj);
+    secp256k1_ge_set_gej_var(&mut dgen, &mut gj);
 
     // Using Rust's range syntax instead of C++ increment
     for j in 1..ecmult_table_size(window_g) {
         secp256k1_gej_set_ge(&mut gj, &ge);
-        secp256k1_gej_add_ge_var(&mut gj, &gj, &dgen, None);
-        secp256k1_ge_set_gej_var(&mut ge, &gj);
+        let gj2 = gj.clone();
+        secp256k1_gej_add_ge_var(&mut gj, &gj2, &dgen, None);
+        secp256k1_ge_set_gej_var(&mut ge, &mut gj);
         secp256k1_ge_to_storage(&mut table[j as usize], &ge);
     }
 }
@@ -48,20 +47,21 @@ fn secp256k1_ecmult_compute_table(table: &mut [secp256k1_ge_storage], window_g: 
 fn secp256k1_ecmult_compute_two_tables(
     table: &mut [secp256k1_ge_storage],
     table_128: &mut [secp256k1_ge_storage],
-    window_g: i32,
+    window_g: usize,
     gen: &secp256k1_ge
 ) {
     let mut gj = secp256k1_gej::new();
     secp256k1_gej_set_ge(&mut gj, gen);
     
-    secp256k1_ecmult_compute_table(table, window_g, &gj);
+    secp256k1_ecmult_compute_table(table, window_g as i32, &gj);
     
     // Rust range for the loop
     for _ in 0..128 {
-        secp256k1_gej_double_var(&mut gj, &gj, None);
+        let gj2 = gj.clone();
+        secp256k1_gej_double_var(&mut gj, &gj2, None);
     }
     
-    secp256k1_ecmult_compute_table(table_128, window_g, &gj);
+    secp256k1_ecmult_compute_table(table_128, window_g as i32, &gj);
 }
 
 // Assuming this helper function exists or needs to be defined
@@ -74,34 +74,35 @@ fn ecmult_table_size(window_g: i32) -> usize {
 
 fn print_table(fp: &mut File, name: &str, window_g: usize, table: &[secp256k1_ge_storage]) -> io::Result<()> {
     writeln!(fp, "pub const {}: [secp256k1_ge_storage; {}] = [", name, ECMULT_TABLE_SIZE(window_g))?;
-    writeln!(
-        fp,
-        "    secp256k1_ge_storage([0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}])",
-        table[0][0], table[0][1], table[0][2], table[0][3],
-        table[0][4], table[0][5], table[0][6], table[0][7],
-        table[0][8], table[0][9], table[0][10], table[0][11],
-        table[0][12], table[0][13], table[0][14], table[0][15],
-    )?;
+    todo!();
+    // writeln!(
+    //     fp,
+    //     "    secp256k1_ge_storage([0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}])",
+    //     table[0][0], table[0][1], table[0][2], table[0][3],
+    //     table[0][4], table[0][5], table[0][6], table[0][7],
+    //     table[0][8], table[0][9], table[0][10], table[0][11],
+    //     table[0][12], table[0][13], table[0][14], table[0][15],
+    // )?;
 
-    for j in 1..ECMULT_TABLE_SIZE(window_g) {
-        writeln!(
-            fp,
-            "    ,secp256k1_ge_storage([0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}])",
-            table[j][0], table[j][1], table[j][2], table[j][3],
-            table[j][4], table[j][5], table[j][6], table[j][7],
-            table[j][8], table[j][9], table[j][10], table[j][11],
-            table[j][12], table[j][13], table[j][14], table[j][15],
-        )?;
-    }
+    // for j in 1..ECMULT_TABLE_SIZE(window_g) {
+    //     writeln!(
+    //         fp,
+    //         "    ,secp256k1_ge_storage([0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x}])",
+    //         table[j][0], table[j][1], table[j][2], table[j][3],
+    //         table[j][4], table[j][5], table[j][6], table[j][7],
+    //         table[j][8], table[j][9], table[j][10], table[j][11],
+    //         table[j][12], table[j][13], table[j][14], table[j][15],
+    //     )?;
+    // }
     writeln!(fp, "];")?;
     Ok(())
 }
 
-fn print_two_tables(fp: &mut File, window_g: i32) -> io::Result<()> {
-    let mut table = vec![secp256k1_ge_storage::default(); ECMULT_TABLE_SIZE(window_g)];
-    let mut table_128 = vec![secp256k1_ge_storage::default(); ECMULT_TABLE_SIZE(window_g)];
+fn print_two_tables(fp: &mut File, window_g: usize) -> io::Result<()> {
+    let mut table = vec![secp256k1_ge_storage::new(); ECMULT_TABLE_SIZE(window_g as usize)];
+    let mut table_128 = vec![secp256k1_ge_storage::new(); ECMULT_TABLE_SIZE(window_g as usize)];
 
-    secp256k1_ecmult_compute_two_tables(&mut table, &mut table_128, window_g, &SECP256K1_GE_CONST_G);
+    secp256k1_ecmult_compute_two_tables(&mut table, &mut table_128, window_g, &secp256k1_ge_const_g);
 
     print_table(fp, "SECP256K1_PRE_G", window_g, &table)?;
     print_table(fp, "SECP256K1_PRE_G_128", window_g, &table_128)?;
@@ -110,7 +111,7 @@ fn print_two_tables(fp: &mut File, window_g: i32) -> io::Result<()> {
 }
 
 fn main() -> io::Result<()> {
-    let window_g = if ECMULT_WINDOW_SIZE < 15 { 15 } else { ECMULT_WINDOW_SIZE };
+    let window_g:usize = if ECMULT_WINDOW_SIZE < 15 { 15 } else { ECMULT_WINDOW_SIZE as usize};
     let mut fp = File::create("src/secp256k1/precomputed_ecmult.rs")?;
 
     writeln!(fp, "// This file was automatically generated by precompute_ecmult.")?;

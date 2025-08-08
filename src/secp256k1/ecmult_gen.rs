@@ -4,20 +4,22 @@
  * file COPYING or https://www.opensource.org/licenses/mit-license.php.*
  ***********************************************************************/
  #![allow(warnings)]
- use super::{secp256k1_scalar, secp256k1_scalar_clear};
-use super::group::*;
+use crate::secp256k1::{secp256k1_scalar, secp256k1_scalar_one, secp256k1_scalar_clear};
+//use crate::secp256k1::group::*;
+use crate::secp256k1::group::{secp256k1_ge, secp256k1_gej, secp256k1_gej_clear, secp256k1_ge_storage, secp256k1_ge_storage_cmov, secp256k1_ge_from_storage, secp256k1_gej_add_ge, secp256k1_ge_clear,
+    secp256k1_gej_set_ge, secp256k1_gej_neg, secp256k1_ge_const_g, secp256k1_gej_rescale};
 use crate::secp256k1::precomputed_ec_mult_gen::*;
 use crate::secp256k1::field_5x52::*;
 use crate::secp256k1::hash::*;
-use crate::secp256k1::*;
 use crate::secp256k1::field_5x52::*;
 use crate::secp256k1::scalar_4x64::*;
+use crate::{SECP256K1_FE_CONST_INNER, SECP256K1_FE_CONST};
 
 pub const ECMULT_GEN_PREC_BITS: i32 = 2;
 pub const ECMULT_WINDOW_SIZE: i32 = 15;
 
-pub const secp256k1_fe_one: secp256k1_fe = SECP256K1_FE_CONST(0, 0, 0, 0, 0, 0, 0, 1);
-pub const secp256k1_const_beta: secp256k1_fe = SECP256K1_FE_CONST(
+pub const secp256k1_fe_one: secp256k1_fe =     SECP256K1_FE_CONST!(0, 0, 0, 0, 0, 0, 0, 1);
+pub const secp256k1_const_beta: secp256k1_fe = SECP256K1_FE_CONST!(
     0x7ae96a2b, 0x657c0710, 0x6e64479e, 0xac3434e9,
     0x9cf04975, 0x12f58995, 0xc1396c28, 0x719501ee
 );
@@ -90,13 +92,13 @@ impl secp256k1_ecmult_gen_context {
         let g = ECMULT_GEN_PREC_G!(bits as u64) as i32;
         let n = ECMULT_GEN_PREC_N!(bits as u64) as i32;
     
-        let mut adds: secp256k1_ge_storage;
-        let mut gnb: secp256k1_scalar;
+        let mut adds = secp256k1_ge_storage::new();
+        let mut gnb= secp256k1_scalar::new();
         let (mut i, mut j, mut n_i): (i32, i32, i32);
         
         //memset(&adds, 0, sizeof(adds));
         let mut add: secp256k1_ge = secp256k1_ge::new();
-        *r = self.initial;
+        *r = self.initial.clone();
         /* Blind scalar/point multiplication by computing (n-b)G + bG instead of nG. */
         secp256k1_scalar_add(&mut gnb, gn, &self.blind);
         add.infinity = 0;
@@ -118,7 +120,8 @@ impl secp256k1_ecmult_gen_context {
                 }
             }
             secp256k1_ge_from_storage(&mut add, &adds);
-            secp256k1_gej_add_ge(r, r, &add);
+            let r2 = r.clone();
+            secp256k1_gej_add_ge(r, &r2, &add);
         }
         n_i = 0;
         secp256k1_ge_clear(&mut add);
@@ -128,18 +131,19 @@ impl secp256k1_ecmult_gen_context {
     /* Setup blinding values for secp256k1_ecmult_gen. */
     //static void secp256k1_ecmult_gen_blind(secp256k1_ecmult_gen_context *ctx, const unsigned char *seed32) {
     pub fn secp256k1_ecmult_gen_blind(&mut self, seed32: &[u8]) {
-        let mut b: secp256k1_scalar;
-        let mut gb: secp256k1_gej;
-        let mut s: secp256k1_fe;
+        let mut b = secp256k1_scalar::new();
+        let mut gb = secp256k1_gej::new();
+        let mut s = secp256k1_fe::new();
         let mut nonce32: [u8; 32] = [0; 32];
-        let mut rng: secp256k1_rfc6979_hmac_sha256;
+        let mut rng = secp256k1_rfc6979_hmac_sha256::new();
         let mut overflow: i32;
         let mut keydata: [u8; 64] = [0; 64];
 
         if seed32.len() == 0 {
             /* When seed is NULL, reset the initial point and blinding value. */
             secp256k1_gej_set_ge(&mut self.initial, &secp256k1_ge_const_g);
-            secp256k1_gej_neg(&mut self.initial, &self.initial);
+            let initial = self.initial.clone();
+            secp256k1_gej_neg(&mut self.initial, &initial);
             secp256k1_scalar_set_int(&mut self.blind, 1);
         }
         /* The prior blinding value (if not reset) is chained forward by including it in the hash. */
@@ -158,25 +162,27 @@ impl secp256k1_ecmult_gen_context {
         //memset(keydata, 0, sizeof(keydata));
         keydata = [0; 64];
         /* Accept unobservably small non-uniformity. */
-        secp256k1_rfc6979_hmac_sha256_generate(&rng, nonce32.as_mut_slice());
+        secp256k1_rfc6979_hmac_sha256_generate(&mut rng, nonce32.as_mut_slice());
         overflow = !secp256k1_fe_set_b32(&mut s, nonce32.as_slice());
         overflow |= secp256k1_fe_is_zero(&s);
         secp256k1_fe_cmov(&mut s, &secp256k1_fe_one, overflow);
         /* Randomize the projection to defend against multiplier sidechannels. */
         secp256k1_gej_rescale(&mut self.initial, &s);
         secp256k1_fe_clear(&mut s);
-        secp256k1_rfc6979_hmac_sha256_generate(&rng, nonce32.as_mut_slice());
+        secp256k1_rfc6979_hmac_sha256_generate(&mut rng, nonce32.as_mut_slice());
         let mut overflow:i32 = 0;
         secp256k1_scalar_set_b32(&mut b, &nonce32, &mut overflow);
         /* A blinding value of 0 works, but would undermine the projection hardening. */
-        secp256k1_scalar_cmov(&mut b, &secp256k1_scalar_one, secp256k1_scalar_is_zero(&b) as i32);
+        let flag = secp256k1_scalar_is_zero(&b) as i32;
+        secp256k1_scalar_cmov(&mut b, &secp256k1_scalar_one, flag);
         secp256k1_rfc6979_hmac_sha256_finalize(&mut rng);
         //memset(nonce32, 0, 32);
         nonce32 = [0; 32];
         self.secp256k1_ecmult_gen(&mut gb, &b);
-        secp256k1_scalar_negate(&mut b, &b);
-        self.blind = b;
-        self.initial = gb;
+        let b2 = b.clone();
+        secp256k1_scalar_negate(&mut b, &b2);
+        self.blind = b.clone();
+        self.initial = gb.clone();
         secp256k1_scalar_clear(&mut b);
         secp256k1_gej_clear(&mut gb);
     }

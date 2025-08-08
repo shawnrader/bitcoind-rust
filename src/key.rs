@@ -102,8 +102,8 @@ fn ec_seckey_import_der(ctx: &secp256k1_context, out32: &mut [u8; 32], mut secke
  * key32 must point to a 32-byte raw private key.
  */
 //int ec_seckey_export_der(const secp256k1_context *ctx, unsigned char *seckey, size_t *seckeylen, const unsigned char *key32, bool compressed) {
-fn ec_seckey_export_der(ctx: &secp256k1_context, seckey: &mut [u8], key32: &[u8; 32], compressed: bool) -> bool {
-    let mut pubkey: secp256k1_pubkey;
+fn ec_seckey_export_der(ctx: &mut secp256k1_context, seckey: &mut [u8], key32: &[u8; 32], compressed: bool) -> bool {
+    let mut pubkey = secp256k1_pubkey { data:[0u8; 64]};
     let mut pubkeylen: usize = 0;
     if !secp256k1_ec_pubkey_create(ctx, &mut pubkey, key32) {
         return false;
@@ -221,30 +221,30 @@ impl CKey {
         self.fCompressed = fCompressedIn;   
     }
 
-    pub fn Negate(&self) -> bool
+    pub fn Negate(&mut self) -> bool
     {
         assert!(self.fValid);
         return secp256k1_ec_seckey_negate(&self.secp256k1_context_sign, &mut self.keydata) == 0;
     }
     
 
-    fn GetPrivKey(&self) -> CPrivKey {
+    fn GetPrivKey(&mut self) -> CPrivKey {
         assert!(self.fValid);
-        let mut seckey: CPrivKey;
-        let mut seckeylen: usize;
+        let mut seckey:CPrivKey = [0u8; 279];
+
 
         //seckey.resize(Self::SIZE);
-        let ret = ec_seckey_export_der(&self.secp256k1_context_sign, &mut seckey, &self.keydata, self.fCompressed);
+        let ret = ec_seckey_export_der(&mut self.secp256k1_context_sign, &mut seckey, &self.keydata, self.fCompressed);
         assert!(ret);
         return seckey;
     }
     
-    pub fn GetPubKey(&self) -> CPubKey {
+    pub fn GetPubKey(&mut self) -> CPubKey {
         assert!(self.fValid);
-        let mut pubkey: secp256k1_pubkey;
+        let mut pubkey = secp256k1_pubkey {data: [0; 64]};
         let mut clen: usize = CPubKey::SIZE;
-        let mut result: CPubKey;
-        let ret = secp256k1_ec_pubkey_create(&self.secp256k1_context_sign, &mut pubkey, &self.keydata);
+        let mut result = CPubKey { vch : [0; 65]};
+        let ret = secp256k1_ec_pubkey_create(&mut self.secp256k1_context_sign, &mut pubkey, &self.keydata);
         assert!(ret);
         let flags = if self.fCompressed { SECP256K1_EC_COMPRESSED } else { SECP256K1_EC_UNCOMPRESSED };
         secp256k1_ec_pubkey_serialize(&self.secp256k1_context_sign, &mut result.vch, &mut clen, &pubkey, flags);

@@ -95,7 +95,7 @@ pub const SECP256K1_TAG_PUBKEY_HYBRID_ODD: u8 = 0x07;
  *  compare keys, use secp256k1_ec_pubkey_cmp.
  */
 pub struct secp256k1_pubkey {
-    data: [u8; 64],
+    pub data: [u8; 64],
 }
 
 pub struct secp256k1_context {
@@ -149,14 +149,14 @@ fn secp256k1_pubkey_load(ctx: &secp256k1_context, ge: &mut secp256k1_ge, pubkey:
         /* When the secp256k1_ge_storage type is exactly 64 byte, use its
          * representation inside secp256k1_pubkey, as conversion is very fast.
          * Note that secp256k1_pubkey_save must use the same representation. */
-        let mut s: secp256k1_ge_storage;
+        let mut s = secp256k1_ge_storage::new();
         //memcpy(&s, &pubkey.data[0], std::mem::size_of::<secp256k1_ge_storage>());
         s.x.copy_from_u8slice(pubkey.data.as_slice());
         secp256k1_ge_from_storage(ge, &s);
     } else {
         /* Otherwise, fall back to 32-byte big endian for X and Y. */
-        let mut x: secp256k1_fe;
-        let mut y: secp256k1_fe;
+        let mut x = secp256k1_fe::new();
+        let mut y = secp256k1_fe::new();
         secp256k1_fe_set_b32(&mut x, &pubkey.data);
         secp256k1_fe_set_b32(&mut y, &pubkey.data[32..]);
         secp256k1_ge_set_xy(ge, &x, &y);
@@ -178,9 +178,9 @@ fn secp256k1_pubkey_load(ctx: &secp256k1_context, ge: &mut secp256k1_ge, pubkey:
 //     }
 // }
 
-fn secp256k1_pubkey_save(pubkey: &mut secp256k1_pubkey, ge: &secp256k1_ge) {
+fn secp256k1_pubkey_save(pubkey: &mut secp256k1_pubkey, ge: &mut secp256k1_ge) {
     if std::mem::size_of::<secp256k1_ge_storage>() == 64 {
-        let mut s: secp256k1_ge_storage;
+        let mut s = secp256k1_ge_storage::new();
         secp256k1_ge_to_storage(&mut s, ge);
         //memcpy(&pubkey.data[0], &s, std::mem::size_of::<secp256k1_ge_storage>());
         pubkey.data.copy_from_slice(&s.to_array());
@@ -194,29 +194,29 @@ fn secp256k1_pubkey_save(pubkey: &mut secp256k1_pubkey, ge: &secp256k1_ge) {
 }
 
 //static int secp256k1_ec_pubkey_create_helper(const secp256k1_ecmult_gen_context *ecmult_gen_ctx, secp256k1_scalar *seckey_scalar, secp256k1_ge *p, const unsigned char *seckey) 
-pub fn secp256k1_ec_pubkey_create_helper(ecmult_gen_ctx: &secp256k1_ecmult_gen_context, seckey_scalar: &mut secp256k1_scalar, p: &mut secp256k1_ge, seckey: &[u8; 32]) -> bool {
+pub fn secp256k1_ec_pubkey_create_helper(ecmult_gen_ctx: &mut secp256k1_ecmult_gen_context, seckey_scalar: &mut secp256k1_scalar, p: &mut secp256k1_ge, seckey: &[u8; 32]) -> bool {
 
-    let mut pj: secp256k1_gej;
+    let mut pj = secp256k1_gej::new();
 
     let ret = secp256k1_scalar_set_b32_seckey(seckey_scalar, seckey);
     secp256k1_scalar_cmov(seckey_scalar, &secp256k1_scalar_one, !ret);
 
     ecmult_gen_ctx.secp256k1_ecmult_gen(&mut pj, seckey_scalar);
-    secp256k1_ge_set_gej(p, &pj);
+    secp256k1_ge_set_gej(p, &mut pj);
     return ret != 0;
 }
 
 //int secp256k1_ec_pubkey_create(const secp256k1_context* ctx, secp256k1_pubkey *pubkey, const unsigned char *seckey) 
-pub fn secp256k1_ec_pubkey_create(ctx: &secp256k1_context, pubkey: &mut secp256k1_pubkey, seckey: &[u8; 32]) -> bool {
-    let mut p: secp256k1_ge;
-    let mut seckey_scalar: secp256k1_scalar;
+pub fn secp256k1_ec_pubkey_create(ctx: &mut secp256k1_context, pubkey: &mut secp256k1_pubkey, seckey: &[u8; 32]) -> bool {
+    let mut p = secp256k1_ge::new();
+    let mut seckey_scalar = secp256k1_scalar::new();
  
     //TODO: memset(pubkey, 0, sizeof(*pubkey));
     //ARG_CHECK(secp256k1_ecmult_gen_context_is_built(&ctx->ecmult_gen_ctx));
     //ARG_CHECK(seckey != NULL);
 
-    let ret = secp256k1_ec_pubkey_create_helper(&ctx.ecmult_gen_ctx, &mut seckey_scalar, &mut p, seckey);
-    secp256k1_pubkey_save(pubkey, &p);
+    let ret = secp256k1_ec_pubkey_create_helper(&mut ctx.ecmult_gen_ctx, &mut seckey_scalar, &mut p, seckey);
+    secp256k1_pubkey_save(pubkey, &mut p);
     //secp256k1_memczero(pubkey, !ret);
     if !ret {pubkey.data.fill(0)};
 
@@ -226,7 +226,7 @@ pub fn secp256k1_ec_pubkey_create(ctx: &secp256k1_context, pubkey: &mut secp256k
 
 //int secp256k1_ec_pubkey_serialize(const secp256k1_context* ctx, unsigned char *output, size_t *outputlen, const secp256k1_pubkey* pubkey, unsigned int flags) {
 pub fn secp256k1_ec_pubkey_serialize(ctx: &secp256k1_context, output: &mut [u8], outputlen: &mut usize, pubkey: &secp256k1_pubkey, flags: u32) -> bool {
-    let mut Q: secp256k1_ge;
+    let mut Q = secp256k1_ge::new();
     let mut len: usize;
     let mut ret: i32 = 0;
 
@@ -252,14 +252,15 @@ pub fn secp256k1_ec_pubkey_serialize(ctx: &secp256k1_context, output: &mut [u8],
 
 //int secp256k1_ec_seckey_negate(const secp256k1_context* ctx, unsigned char *seckey) {
 pub fn secp256k1_ec_seckey_negate(ctx: &secp256k1_context, seckey: &mut [u8; 32]) -> i32 {
-    let mut sec: secp256k1_scalar;
+    let mut sec = secp256k1_scalar::new();
     let mut ret: i32 = 0;
     //VERIFY_CHECK(ctx != NULL);
     //ARG_CHECK(seckey != NULL);
 
     ret = secp256k1_scalar_set_b32_seckey(&mut sec, seckey);
     secp256k1_scalar_cmov(&mut sec, &secp256k1_scalar_zero, !ret);
-    secp256k1_scalar_negate(&mut sec, &sec);
+    let sec1 = sec.clone();
+    secp256k1_scalar_negate(&mut sec, &sec1);
     secp256k1_scalar_get_b32(seckey, &mut sec);
 
     secp256k1_scalar_clear(&mut sec);
@@ -279,8 +280,9 @@ pub fn secp256k1_ec_pubkey_negate(ctx: &secp256k1_context, pubkey: &mut secp256k
     ret = secp256k1_pubkey_load(ctx, &mut p, pubkey);
     pubkey.data = [0u8; 64];
     if ret != 0 {
-        secp256k1_ge_neg(&mut p, &p);
-        secp256k1_pubkey_save(pubkey, &p);
+        let p1 = p.clone();
+        secp256k1_ge_neg(&mut p, &p1);
+        secp256k1_pubkey_save(pubkey, &mut p);
     }
     return ret;
 }
@@ -288,9 +290,10 @@ pub fn secp256k1_ec_pubkey_negate(ctx: &secp256k1_context, pubkey: &mut secp256k
 
 //static int secp256k1_ec_seckey_tweak_add_helper(secp256k1_scalar *sec, const unsigned char *tweak32) {
 fn secp256k1_ec_seckey_tweak_add_helper(sec: &mut secp256k1_scalar, tweak32: &[u8; 32]) -> i32 {
-    let mut term: secp256k1_scalar;
+    let mut term = secp256k1_scalar::new();
     let mut overflow: i32 = 0;
     let mut ret: i32 = 0;
+
 
     secp256k1_scalar_set_b32(&mut term, tweak32, &mut overflow);
     ret = ((overflow == 0) && secp256k1_eckey_privkey_tweak_add(sec, &term)) as i32;
@@ -300,7 +303,7 @@ fn secp256k1_ec_seckey_tweak_add_helper(sec: &mut secp256k1_scalar, tweak32: &[u
 
 //int secp256k1_ec_seckey_tweak_add(const secp256k1_context* ctx, unsigned char *seckey, const unsigned char *tweak32) {
 pub fn secp256k1_ec_seckey_tweak_add(ctx: &secp256k1_context, seckey: &mut [u8; 32], tweak32: &[u8; 32]) -> i32 {
-    let mut sec: secp256k1_scalar;
+    let mut sec = secp256k1_scalar::new();
     let mut ret: i32 = 0;
 
     ret = secp256k1_scalar_set_b32_seckey(&mut sec, seckey);
@@ -319,22 +322,22 @@ pub fn secp256k1_ec_privkey_tweak_add(ctx: &secp256k1_context, seckey: &mut [u8;
 
 //static int secp256k1_ec_pubkey_tweak_add_helper(secp256k1_ge *p, const unsigned char *tweak32) {
 fn secp256k1_ec_pubkey_tweak_add_helper(p: &mut secp256k1_ge, tweak32: &[u8; 32]) -> i32 {
-    let mut term: secp256k1_scalar;
+    let mut term = secp256k1_scalar::new();
     let mut overflow: i32 = 0;
     secp256k1_scalar_set_b32(&mut term, tweak32, &mut overflow);
-    return (overflow == 0 && secp256k1_eckey_pubkey_tweak_add(p, &term)) as i32;
+    return (overflow == 0 && secp256k1_eckey_pubkey_tweak_add(p, &[term]) != 0) as i32;
 }
 
 //int secp256k1_ec_pubkey_tweak_add(const secp256k1_context* ctx, secp256k1_pubkey *pubkey, const unsigned char *tweak32) {
 pub fn secp256k1_ec_pubkey_tweak_add(ctx: &secp256k1_context, pubkey: &mut secp256k1_pubkey, tweak32: &[u8; 32]) -> i32 {
-    let mut p: secp256k1_ge;
+    let mut p = secp256k1_ge::new();
     let mut ret: i32 = 0;
 
     ret = secp256k1_pubkey_load(ctx, &mut p, pubkey);
     pubkey.data = [0u8; 64];
     ret = ret & secp256k1_ec_pubkey_tweak_add_helper(&mut p, tweak32) as i32;
     if ret != 0 {
-        secp256k1_pubkey_save(pubkey, &p);
+        secp256k1_pubkey_save(pubkey, &mut p);
     }
 
     return ret;
@@ -342,14 +345,14 @@ pub fn secp256k1_ec_pubkey_tweak_add(ctx: &secp256k1_context, pubkey: &mut secp2
 
 //int secp256k1_ec_seckey_tweak_mul(const secp256k1_context* ctx, unsigned char *seckey, const unsigned char *tweak32) {
 pub fn secp256k1_ec_seckey_tweak_mul(ctx: &secp256k1_context, seckey: &mut [u8; 32], tweak32: &[u8; 32]) -> i32 {
-    let mut factor: secp256k1_scalar;
-    let mut sec: secp256k1_scalar;
+    let mut factor = secp256k1_scalar::new();
+    let mut sec = secp256k1_scalar::new();
     let mut ret: i32 = 0;
     let mut overflow: i32 = 0;
 
     secp256k1_scalar_set_b32(&mut factor, tweak32, &mut overflow);
     ret = secp256k1_scalar_set_b32_seckey(&mut sec, seckey);
-    ret &= ((overflow != 0) && secp256k1_eckey_privkey_tweak_mul(&mut sec, &factor)) as i32;
+    ret &= ((overflow != 0) && secp256k1_eckey_privkey_tweak_mul(&mut sec, &factor) == 0) as i32;
     secp256k1_scalar_cmov(&mut sec, &secp256k1_scalar_zero, !ret);
     secp256k1_scalar_get_b32(seckey, &mut sec);
 
@@ -365,8 +368,8 @@ pub fn secp256k1_ec_privkey_tweak_mul(ctx: &secp256k1_context, seckey: &mut [u8;
 
 //int secp256k1_ec_pubkey_tweak_mul(const secp256k1_context* ctx, secp256k1_pubkey *pubkey, const unsigned char *tweak32) {
 pub fn secp256k1_ec_pubkey_tweak_mul(ctx: &secp256k1_context, pubkey: &mut secp256k1_pubkey, tweak32: &[u8; 32]) -> i32 {
-    let mut p: secp256k1_ge;
-    let mut factor: secp256k1_scalar;
+    let mut p = secp256k1_ge::new();
+    let mut factor = secp256k1_scalar::new();
     let mut ret: i32 = 0;
     let mut overflow: i32 = 0;
 
@@ -374,9 +377,9 @@ pub fn secp256k1_ec_pubkey_tweak_mul(ctx: &secp256k1_context, pubkey: &mut secp2
     ret = (overflow != 0) as i32 & secp256k1_pubkey_load(ctx, &mut p, pubkey);
     //memset(pubkey, 0, sizeof(*pubkey));
     pubkey.data.fill(0);
-    if (ret) {
-        if (secp256k1_eckey_pubkey_tweak_mul(&mut p, &factor)) {
-            secp256k1_pubkey_save(pubkey, &p);
+    if ret != 0 {
+        if secp256k1_eckey_pubkey_tweak_mul(&mut p, &[factor]) != 0 {
+            secp256k1_pubkey_save(pubkey, &mut p);
         } else {
             ret = 0;
         }
@@ -396,8 +399,8 @@ pub fn secp256k1_context_randomize(ctx: &mut secp256k1_context, seed32: &[u8; 32
 //int secp256k1_ec_pubkey_combine(const secp256k1_context* ctx, secp256k1_pubkey *pubnonce, const secp256k1_pubkey * const *pubnonces, size_t n) {
 pub fn secp256k1_ec_pubkey_combine(ctx: &secp256k1_context, pubnonce: &mut secp256k1_pubkey, pubnonces: &mut [secp256k1_pubkey], n: usize) -> i32 {
     let mut i: usize = 0;
-    let mut Qj: secp256k1_gej;
-    let mut Q: secp256k1_ge;
+    let mut Qj = secp256k1_gej::new();
+    let mut Q = secp256k1_ge::new();
 
     //memset(pubnonce, 0, sizeof(*pubnonce));
     pubnonce.data.fill(0);
@@ -409,19 +412,24 @@ pub fn secp256k1_ec_pubkey_combine(ctx: &secp256k1_context, pubnonce: &mut secp2
     for i in 0..n {
         //ARG_CHECK(pubnonces[i] != NULL);
         secp256k1_pubkey_load(ctx, &mut Q, &pubnonces[i]);
-        secp256k1_gej_add_ge(&mut Qj, &Qj, &Q);
+        let Qj_clone = Qj.clone();
+        secp256k1_gej_add_ge(&mut Qj, &Qj_clone, &Q);
     }
     if secp256k1_gej_is_infinity(&Qj) != 0 {
         return 0;
     }
-    secp256k1_ge_set_gej(&mut Q, &Qj);
-    secp256k1_pubkey_save(pubnonce, &Q);
+    secp256k1_ge_set_gej(&mut Q, &mut Qj);
+    secp256k1_pubkey_save(pubnonce, &mut Q);
     return 1;
 }
 
 //int secp256k1_tagged_sha256(const secp256k1_context* ctx, unsigned char *hash32, const unsigned char *tag, size_t taglen, const unsigned char *msg, size_t msglen) {
 pub fn secp256k1_tagged_sha256(ctx: &secp256k1_context, hash32: &mut [u8; 32], tag: &[u8], taglen: usize, msg: &[u8], msglen: usize) -> i32 {
-    let mut sha: secp256k1_sha256;
+    let mut sha = secp256k1_sha256 {
+        s: [0u32; 8],
+        buf: [0u8; 64],
+        bytes: 0u64,
+    };
 
     secp256k1_sha256_initialize_tagged(&mut sha, tag);
     secp256k1_sha256_write(&mut sha, msg);

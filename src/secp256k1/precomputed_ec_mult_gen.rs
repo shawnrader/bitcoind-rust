@@ -1,9 +1,8 @@
 use crate::secp256k1::group::*;
 use crate::secp256k1::ecmult_gen::*;
 use crate::ECMULT_GEN_PREC_N;
-use crate::SECP256K1_GE_STORAGE_CONST;
+use crate::{SECP256K1_GE_STORAGE_CONST, SECP256K1_FE_STORAGE_CONST};
 use crate::ECMULT_GEN_PREC_G;
-use crate::secp256k1::field_5x52::SECP256K1_FE_STORAGE_CONST;
 
 macro_rules! S {
     ($a:expr, $b:expr, $c:expr, $d:expr, $e:expr, $f:expr, $g:expr, $h:expr, $i:expr, $j:expr, $k:expr, $l:expr, $m:expr, $n:expr, $o:expr, $p:expr) => {
