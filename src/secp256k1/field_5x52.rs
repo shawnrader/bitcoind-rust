@@ -10,8 +10,9 @@
 
 use super::field_5x52_int128::{secp256k1_fe_mul_inner, secp256k1_fe_sqr_inner};
 use crate::secp256k1::modinv64::*;
+use crate::{VERIFY_CHECK};
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct secp256k1_fe {
      /* X = sum(i=0..4, n[i]*2^(i*52)) mod p
       * where p = 2^256 - 0x1000003D1
@@ -19,9 +20,9 @@ pub struct secp256k1_fe {
     pub n : [u64; 5],
 
 #[cfg(feature = "verify")]
-    magnitude: i32,
+    pub magnitude: i32,
 #[cfg(feature = "verify")]
-    normalized: i32,
+    pub normalized: i32,
 }
 
 impl secp256k1_fe {
@@ -58,14 +59,14 @@ macro_rules! SECP256K1_FE_CONST_INNER {
     };
 }
 
-#[cfg(feature = "verify")]
-pub fn SECP256K1_FE_CONST(d7: u64, d6: u64, d5: u64, d4: u64, d3: u64, d2: u64, d1: u64, d0: u64) -> secp256k1_fe {
-    secp256k1_fe { 
-        n: SECP256K1_FE_CONST_INNER!((d7), (d6), (d5), (d4), (d3), (d2), (d1), (d0)),
-        magnitude: 1,
-        normalized: 1
-    }
-}
+// #[cfg(feature = "verify")]
+// pub fn SECP256K1_FE_CONST(d7: u64, d6: u64, d5: u64, d4: u64, d3: u64, d2: u64, d1: u64, d0: u64) -> secp256k1_fe {
+//     secp256k1_fe { 
+//         n: SECP256K1_FE_CONST_INNER!((d7), (d6), (d5), (d4), (d3), (d2), (d1), (d0)),
+//         magnitude: 1,
+//         normalized: 1
+//     }
+// }
  
 // #[cfg(not (feature = "verify"))]
 // pub fn SECP256K1_FE_CONST(d7: u32, d6: u32, d5: u32, d4: u32, d3: u32, d2: u32, d1: u32, d0: u32) -> secp256k1_fe {
@@ -87,6 +88,10 @@ macro_rules! SECP256K1_FE_CONST {
                 $d1 as u64,
                 $d0 as u64
             ),
+            #[cfg(feature = "verify")]
+            magnitude: 1,
+            #[cfg(feature = "verify")]
+            normalized: 0,
         }
     };
 }
@@ -221,29 +226,30 @@ macro_rules! SECP256K1_FE_STORAGE_CONST {
 //static void secp256k1_fe_verify(const secp256k1_fe *a) {
 pub fn secp256k1_fe_verify(a: &secp256k1_fe) {
     let d = &a.n;
-    let m = if a.normalized { 1 } else { 2 * a.magnitude };
+    let m = if a.normalized == 1 { 1 } else { 2 * a.magnitude };
+    let mut r: i32 = 1;
 
     /* secp256k1 'p' value defined in "Standards for Efficient Cryptography" (SEC2) 2.7.1. */
-    r &= (d[0] <= 0xFFFFFFFFFFFFF_u64 * m);
-    r &= (d[1] <= 0xFFFFFFFFFFFFF_u64 * m);
-    r &= (d[2] <= 0xFFFFFFFFFFFFF_u64 * m);
-    r &= (d[3] <= 0xFFFFFFFFFFFFF_u64 * m);
-    r &= (d[4] <= 0x0FFFFFFFFFFFF_u64 * m);
-    r &= (a.magnitude >= 0);
-    r &= (a.magnitude <= 2048);
-    if (a.normalized) {
-        r &= (a.magnitude <= 1);
-        if (r && (d[4] == 0x0FFFFFFFFFFFF_u64) && ((d[3] & d[2] & d[1]) == 0xFFFFFFFFFFFFF_u64)) {
-            r &= (d[0] < 0xFFFFEFFFFFC2F_u64);
+    r &= (d[0] <= 0xFFFFFFFFFFFFF_u64 * m as u64) as i32;
+    r &= (d[1] <= 0xFFFFFFFFFFFFF_u64 * m as u64) as i32;
+    r &= (d[2] <= 0xFFFFFFFFFFFFF_u64 * m as u64) as i32;
+    r &= (d[3] <= 0xFFFFFFFFFFFFF_u64 * m as u64) as i32;
+    r &= (d[4] <= 0x0FFFFFFFFFFFF_u64 * m as u64) as i32;
+    r &= (a.magnitude >= 0) as i32;
+    r &= (a.magnitude <= 2048) as i32;
+    if a.normalized == 1 {
+        r &= (a.magnitude <= 1) as i32;
+        if r != 0 && (d[4] == 0x0FFFFFFFFFFFF_u64) && ((d[3] & d[2] & d[1]) == 0xFFFFFFFFFFFFF_u64)  {
+            r &= (d[0] < 0xFFFFEFFFFFC2F_u64) as i32;
         }
     }
-    VERIFY_CHECK(r == 1);
+    VERIFY_CHECK!(r == 1);
 }
  
 //static void secp256k1_fe_get_bounds(secp256k1_fe *r, int m) {
 fn secp256k1_fe_get_bounds(r: &mut secp256k1_fe, m: i32) {
-    //VERIFY_CHECK(m >= 0);
-    //VERIFY_CHECK(m <= 2048);
+    VERIFY_CHECK!(m >= 0);
+    VERIFY_CHECK!(m <= 2048);
     r.n[0] = 0xFFFFFFFFFFFFF_u64 * 2 * m as u64;
     r.n[1] = 0xFFFFFFFFFFFFF_u64 * 2 * m as u64;
     r.n[2] = 0xFFFFFFFFFFFFF_u64 * 2 * m as u64;
@@ -252,7 +258,7 @@ fn secp256k1_fe_get_bounds(r: &mut secp256k1_fe, m: i32) {
     #[cfg(feature = "verify")]
     {
         r.magnitude = m;
-        r.normalized = (m == 0);
+        r.normalized = (m == 0) as i32;
         secp256k1_fe_verify(r);
     }
 }
@@ -278,7 +284,7 @@ pub fn secp256k1_fe_normalize(r: &mut secp256k1_fe) {
     t4 += (t3 >> 52); t3 &= 0xFFFFFFFFFFFFF_u64; m &= t3;
  
     /* ... except for a possible carry at bit 48 of t4 (i.e. bit 256 of the field element) */
-    //VERIFY_CHECK(t4 >> 49 == 0);
+    VERIFY_CHECK!(t4 >> 49 == 0);
  
     /* At most a single final reduction is needed; check if the value is >= the field characteristic */
     x = (t4 >> 48) | ((t4 == 0x0FFFFFFFFFFFF_u64) & (m == 0xFFFFFFFFFFFFF_u64)
@@ -292,7 +298,7 @@ pub fn secp256k1_fe_normalize(r: &mut secp256k1_fe) {
     t4 += (t3 >> 52); t3 &= 0xFFFFFFFFFFFFF_u64;
  
     /* If t4 didn't carry to bit 48 already, then it should have after any final reduction */
-    //VERIFY_CHECK(t4 >> 48 == x);
+    VERIFY_CHECK!(t4 >> 48 == x);
  
     /* Mask off the possible multiple of 2^256 from the final reduction */
     t4 &= 0x0FFFFFFFFFFFF_u64;
@@ -323,7 +329,7 @@ pub fn secp256k1_fe_normalize_weak(r: &mut secp256k1_fe) {
     t4 += (t3 >> 52); t3 &= 0xFFFFFFFFFFFFF_u64;
  
     /* ... except for a possible carry at bit 48 of t4 (i.e. bit 256 of the field element) */
-    //VERIFY_CHECK(t4 >> 49 == 0);
+    VERIFY_CHECK!(t4 >> 49 == 0);
  
     r.n[0] = t0; r.n[1] = t1; r.n[2] = t2; r.n[3] = t3; r.n[4] = t4;
  
@@ -350,7 +356,7 @@ pub fn secp256k1_fe_normalize_var(r: &mut secp256k1_fe) {
     t4 += (t3 >> 52); t3 &= 0xFFFFFFFFFFFFF_u64; m &= t3;
  
     /* ... except for a possible carry at bit 48 of t4 (i.e. bit 256 of the field element) */
-    //VERIFY_CHECK(t4 >> 49 == 0);
+    VERIFY_CHECK!(t4 >> 49 == 0);
  
     /* At most a single final reduction is needed; check if the value is >= the field characteristic */
     x = (t4 >> 48) | ((t4 == 0x0FFFFFFFFFFFF_u64) & (m == 0xFFFFFFFFFFFFF_u64)
@@ -364,7 +370,7 @@ pub fn secp256k1_fe_normalize_var(r: &mut secp256k1_fe) {
         t4 += (t3 >> 52); t3 &= 0xFFFFFFFFFFFFF_u64;
  
         /* If t4 didn't carry to bit 48 already, then it should have after any final reduction */
-        //VERIFY_CHECK(t4 >> 48 == x);
+        VERIFY_CHECK!(t4 >> 48 == x);
  
         /* Mask off the possible multiple of 2^256 from the final reduction */
         t4 &= 0x0FFFFFFFFFFFF_u64;
@@ -401,7 +407,7 @@ pub fn secp256k1_fe_normalizes_to_zero(r: &secp256k1_fe) -> i32 {
                                                  z0 |= t4; z1 &= t4 ^ 0xF000000000000_u64;
  
     /* ... except for a possible carry at bit 48 of t4 (i.e. bit 256 of the field element) */
-    //VERIFY_CHECK(t4 >> 49 == 0);
+    VERIFY_CHECK!(t4 >> 49 == 0);
  
     return ((z0 == 0) | (z1 == 0xFFFFFFFFFFFFF_u64)) as i32;
  }
@@ -448,17 +454,17 @@ pub fn secp256k1_fe_normalizes_to_zero_var(r: &secp256k1_fe) -> i32 {
                                                  z0 |= t4; z1 &= t4 ^ 0xF000000000000_u64;
  
     /* ... except for a possible carry at bit 48 of t4 (i.e. bit 256 of the field element) */
-    //VERIFY_CHECK(t4 >> 49 == 0);
+    VERIFY_CHECK!(t4 >> 49 == 0);
  
     return ((z0 == 0) | (z1 == 0xFFFFFFFFFFFFF_u64)) as i32;
 }
  
 pub fn secp256k1_fe_set_int(r: &mut secp256k1_fe, a: i32) {
-    //VERIFY_CHECK(0 <= a && a <= 0x7FFF);
+    VERIFY_CHECK!(0 <= a && a <= 0x7FFF);
     r.n = [a as u64, 0, 0, 0, 0];
 #[cfg(feature = "verify")]
     {
-        r.magnitude = (a != 0);
+        r.magnitude = (a != 0) as i32;
         r.normalized = 1;
         secp256k1_fe_verify(r);
     }
@@ -469,7 +475,7 @@ pub fn secp256k1_fe_is_zero(a: &secp256k1_fe) -> i32 {
     let t = &a.n;
     #[cfg(feature = "verify")]
     {
-        VERIFY_CHECK(a.normalized);
+        VERIFY_CHECK!(a.normalized == 1);
         secp256k1_fe_verify(a);
     }
      return ((t[0] | t[1] | t[2] | t[3] | t[4]) == 0) as i32;
@@ -479,7 +485,7 @@ pub fn secp256k1_fe_is_zero(a: &secp256k1_fe) -> i32 {
 pub fn secp256k1_fe_is_odd(a: &secp256k1_fe) -> i32 {
     #[cfg(feature = "verify")]
     {
-        VERIFY_CHECK(a.normalized);
+        VERIFY_CHECK!(a.normalized == 1);
         secp256k1_fe_verify(a);
     }
     return a.n[0] as i32 & 1;
@@ -501,8 +507,8 @@ fn secp256k1_fe_cmp_var(a: &secp256k1_fe, b: &secp256k1_fe) -> i32 {
     // int i;
     let mut i: i32;
     #[cfg(feature = "verify")] {
-        VERIFY_CHECK(a.normalized);
-        VERIFY_CHECK(b.normalized);
+        VERIFY_CHECK!(a.normalized == 1);
+        VERIFY_CHECK!(b.normalized == 1);
         secp256k1_fe_verify(a);
         secp256k1_fe_verify(b);
     }
@@ -559,7 +565,7 @@ pub fn secp256k1_fe_set_b32(r: &mut secp256k1_fe, a: &[u8]) -> i32 {
      ret = !((r.n[4] == 0x0FFFFFFFFFFFF_u64) & ((r.n[3] & r.n[2] & r.n[1]) == 0xFFFFFFFFFFFFF_u64) & (r.n[0] >= 0xFFFFEFFFFFC2F_u64)) as i32;
     #[cfg(feature = "verify")] {
         r.magnitude = 1;
-        if (ret) {
+        if ret == 1 {
             r.normalized = 1;
             secp256k1_fe_verify(r);
         } else {
@@ -573,7 +579,7 @@ pub fn secp256k1_fe_set_b32(r: &mut secp256k1_fe, a: &[u8]) -> i32 {
 pub fn secp256k1_fe_get_b32(r: &mut [u8], a: &secp256k1_fe) {
 
 #[cfg(feature = "verify")] {
-     VERIFY_CHECK(a.normalized);
+     VERIFY_CHECK!(a.normalized == 1);
      secp256k1_fe_verify(a);
 }
     r[0] = ((a.n[4] >> 40) & 0xFF) as u8;
@@ -613,11 +619,11 @@ pub fn secp256k1_fe_get_b32(r: &mut [u8], a: &secp256k1_fe) {
 // SECP256K1_INLINE static void secp256k1_fe_negate(secp256k1_fe *r, const secp256k1_fe *a, int m) {
 pub fn secp256k1_fe_negate(r: &mut secp256k1_fe, a: &secp256k1_fe, m: i32) {
     #[cfg(feature = "verify")] {
-    VERIFY_CHECK(a.magnitude <= m);
+    VERIFY_CHECK!(a.magnitude <= m);
     secp256k1_fe_verify(a);
-    VERIFY_CHECK(0xFFFFEFFFFFC2F_u64 * 2 * (m + 1) >= 0xFFFFFFFFFFFFF_u64 * 2 * m);
-    VERIFY_CHECK(0xFFFFFFFFFFFFF_u64 * 2 * (m + 1) >= 0xFFFFFFFFFFFFF_u64 * 2 * m);
-    VERIFY_CHECK(0x0FFFFFFFFFFFF_u64 * 2 * (m + 1) >= 0x0FFFFFFFFFFFF_u64 * 2 * m);
+    VERIFY_CHECK!(0xFFFFEFFFFFC2F_u64 * 2 * (m + 1) as u64 >= 0xFFFFFFFFFFFFF_u64 * 2 * m as u64);
+    VERIFY_CHECK!(0xFFFFFFFFFFFFF_u64 * 2 * (m + 1) as u64 >= 0xFFFFFFFFFFFFF_u64 * 2 * m as u64);
+    VERIFY_CHECK!(0x0FFFFFFFFFFFF_u64 * 2 * (m + 1) as u64 >= 0x0FFFFFFFFFFFF_u64 * 2 * m as u64);
     }
     r.n[0] = 0xFFFFEFFFFFC2F_u64 * 2 * (m as u64 + 1) - a.n[0];
     r.n[1] = 0xFFFFFFFFFFFFF_u64 * 2 * (m as u64 + 1) - a.n[1];
@@ -664,12 +670,12 @@ pub fn secp256k1_fe_add(r: &mut secp256k1_fe, a: &secp256k1_fe) {
 // static void secp256k1_fe_mul(secp256k1_fe *r, const secp256k1_fe *a, const secp256k1_fe * SECP256K1_RESTRICT b) {
 pub fn secp256k1_fe_mul(r: &mut secp256k1_fe, a: &secp256k1_fe, b: &secp256k1_fe) {
     #[cfg(feature = "verify")] {
-        VERIFY_CHECK(a.magnitude <= 8);
-        VERIFY_CHECK(b.magnitude <= 8);
+        VERIFY_CHECK!(a.magnitude <= 8);
+        VERIFY_CHECK!(b.magnitude <= 8);
         secp256k1_fe_verify(a);
         secp256k1_fe_verify(b);
-        VERIFY_CHECK(r != b);
-        VERIFY_CHECK(a != b);
+        VERIFY_CHECK!(r != b);
+        VERIFY_CHECK!(a != b);
     }
     secp256k1_fe_mul_inner(r.n.as_mut_slice(), a.n.as_slice(), b.n.as_slice());
     #[cfg(feature = "verify")] {
@@ -682,7 +688,7 @@ pub fn secp256k1_fe_mul(r: &mut secp256k1_fe, a: &secp256k1_fe, b: &secp256k1_fe
 // static void secp256k1_fe_sqr(secp256k1_fe *r, const secp256k1_fe *a) {
 pub fn secp256k1_fe_sqr(r: &mut secp256k1_fe, a: &secp256k1_fe) {
     #[cfg(feature = "verify")] {
-        VERIFY_CHECK(a.magnitude <= 8);
+        VERIFY_CHECK!(a.magnitude <= 8);
         secp256k1_fe_verify(a);
     }
     secp256k1_fe_sqr_inner(r.n.as_mut_slice(), a.n.as_slice());
@@ -707,7 +713,7 @@ pub fn secp256k1_fe_cmov(r: &mut secp256k1_fe, a: &secp256k1_fe, flag: i32) {
     r.n[3] = (r.n[3] & mask0) | (a.n[3] & mask1);
     r.n[4] = (r.n[4] & mask0) | (a.n[4] & mask1);
     #[cfg(feature = "verify")] {
-        if (flag) {
+        if flag != 0 {
             r.magnitude = a.magnitude;
             r.normalized = a.normalized;
         }
@@ -721,7 +727,7 @@ pub fn secp256k1_fe_half(r: &mut secp256k1_fe) {
  
     #[cfg(feature = "verify")] {
         secp256k1_fe_verify(r);
-        VERIFY_CHECK(r.magnitude < 32);
+        VERIFY_CHECK!(r.magnitude < 32);
     }
  
     /* Bounds analysis (over the rationals).
@@ -740,7 +746,7 @@ pub fn secp256k1_fe_half(r: &mut secp256k1_fe) {
     t3 += mask;
     t4 += mask >> 4;
  
-    #[cfg(feature = "verify")] VERIFY_CHECK((t0 & one) == 0);
+    #[cfg(feature = "verify")] VERIFY_CHECK!((t0 & one) == 0);
 
     /* t0..t3: added <= C/2
     *     t4: added <= D/2
@@ -783,7 +789,7 @@ pub fn secp256k1_fe_half(r: &mut secp256k1_fe) {
 pub fn secp256k1_fe_storage_cmov(r: &mut secp256k1_fe_storage, a: &secp256k1_fe_storage, flag: i32) {
     let mut mask0: u64;
     let mut mask1: u64;
-    #[cfg(feature = "verify")] VG_CHECK_VERIFY(r.n, sizeof(r.n));
+    //#[cfg(feature = "verify")] VG_CHECK_VERIFY!(r.n, sizeof(r.n));
     mask0 = flag as u64 + !(0 as u64);
     mask1 = !mask0;
     r.n[0] = (r.n[0] & mask0) | (a.n[0] & mask1);
@@ -794,7 +800,7 @@ pub fn secp256k1_fe_storage_cmov(r: &mut secp256k1_fe_storage, a: &secp256k1_fe_
 
 pub fn secp256k1_fe_to_storage(r: &mut secp256k1_fe_storage, a: &secp256k1_fe) {
     #[cfg(feature = "verify")] {
-        VERIFY_CHECK(a.normalized);
+        VERIFY_CHECK!(a.normalized == 1);
     }
     r.n[0] = a.n[0] | a.n[1] << 52;
     r.n[1] = a.n[1] >> 12 | a.n[2] << 40;
@@ -826,11 +832,11 @@ fn secp256k1_fe_from_signed62(r: &mut secp256k1_fe, a: &secp256k1_modinv64_signe
       * have limbs in [0,2^62). The modulus is < 2^256, so the top limb must be below 2^(256-62*4).
       */
     #[cfg(feature = "verify")] {
-        VERIFY_CHECK(a0 >> 62 == 0);
-        VERIFY_CHECK(a1 >> 62 == 0);
-        VERIFY_CHECK(a2 >> 62 == 0);
-        VERIFY_CHECK(a3 >> 62 == 0);
-        VERIFY_CHECK(a4 >> 8 == 0);
+        VERIFY_CHECK!(a0 >> 62 == 0);
+        VERIFY_CHECK!(a1 >> 62 == 0);
+        VERIFY_CHECK!(a2 >> 62 == 0);
+        VERIFY_CHECK!(a3 >> 62 == 0);
+        VERIFY_CHECK!(a4 >> 8 == 0);
     }
 
     r.n[0] = a0 & M52;
@@ -853,7 +859,7 @@ fn secp256k1_fe_to_signed62(r: &mut secp256k1_modinv64_signed62, a: &secp256k1_f
     let (a0, a1, a2, a3, a4) = (a.n[0] as u64, a.n[1] as u64, a.n[2] as u64, a.n[3] as u64, a.n[4] as u64);
 
     #[cfg(feature = "verify")] {
-        VERIFY_CHECK(a.normalized);
+        VERIFY_CHECK!(a.normalized ==1);
     }
  
     r.v[0] = ((a0 | a1 << 52) & M62) as i64;
@@ -888,7 +894,7 @@ pub fn secp256k1_fe_inv(r: &mut secp256k1_fe, x: &secp256k1_fe) {
     secp256k1_fe_from_signed62(r, &s);
  
     #[cfg(feature = "verify")] {
-        VERIFY_CHECK(secp256k1_fe_normalizes_to_zero(r) == secp256k1_fe_normalizes_to_zero(&tmp));
+        VERIFY_CHECK!(secp256k1_fe_normalizes_to_zero(r) == secp256k1_fe_normalizes_to_zero(&tmp));
     }
 }
  
@@ -903,6 +909,6 @@ pub fn secp256k1_fe_inv_var(r: &mut secp256k1_fe, x: &secp256k1_fe) {
     secp256k1_fe_from_signed62(r, &s);
  
     #[cfg(feature = "verify")] {
-        VERIFY_CHECK(secp256k1_fe_normalizes_to_zero(r) == secp256k1_fe_normalizes_to_zero(&tmp));
+        VERIFY_CHECK!(secp256k1_fe_normalizes_to_zero(r) == secp256k1_fe_normalizes_to_zero(&tmp));
     }
 }

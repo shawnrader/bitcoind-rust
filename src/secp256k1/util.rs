@@ -1,6 +1,13 @@
 #![allow(warnings)]
 use std::process;
 
+#[macro_export]
+macro_rules! VERIFY_CHECK {
+    ($cond:expr) => {
+        assert!($cond)
+    };
+}
+
 // Define the function pointer type using Rust-native types
 pub type secp256k1_callback = fn(&str);
 
@@ -69,4 +76,33 @@ pub fn secp256k1_memczero(s: &mut [u8], flag: bool) {
     for i in 0..p.len() {
         p[i] &= mask;
     }
+}
+
+/** Semantics like memcmp. Variable-time.
+ *
+ * We use this to avoid possible compiler bugs with memcmp, e.g.
+ * https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95189
+ */
+// static SECP256K1_INLINE int secp256k1_memcmp_var(const void *s1, const void *s2, size_t n) {
+//     const unsigned char *p1 = s1, *p2 = s2;
+//     size_t i;
+
+//     for (i = 0; i < n; i++) {
+//         int diff = p1[i] - p2[i];
+//         if (diff != 0) {
+//             return diff;
+//         }
+//     }
+//     return 0;
+// }
+pub fn secp256k1_memcmp_var(s1: &[u8], s2: &[u8], n: usize) -> i32 {
+
+    for i in 0..n {
+        let diff = s1[i] as i32 - s2[i] as i32;
+        if diff != 0 {
+            return diff;
+        }
+    }
+    return 0;
+
 }

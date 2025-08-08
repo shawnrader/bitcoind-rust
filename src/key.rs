@@ -185,7 +185,7 @@ impl CKey {
     const SIZE: usize = 279;
     const COMPRESSED_SIZE: usize = 214;
 
-    fn new() -> CKey {
+    pub fn new() -> CKey {
         CKey {
             fValid: false,
             fCompressed: false,

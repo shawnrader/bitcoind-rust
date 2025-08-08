@@ -1072,7 +1072,7 @@ mod tests {
 
         let mut keys: Vec<CPubKey> = vec![];
         for i in 0..3 {
-            let mut k: CKey;
+            let mut k = CKey::new();
             k.MakeNewKey(true);
             keys.push(k.GetPubKey());
         }

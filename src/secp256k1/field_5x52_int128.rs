@@ -4,11 +4,14 @@
  * file COPYING or https://www.opensource.org/licenses/mit-license.php.*
  ***********************************************************************/
  #![allow(warnings)]
+
+use crate::{VERIFY_CHECK};
+
  #[macro_export] 
 #[cfg(feature="verify")]
 macro_rules! VERIFY_BITS {
     ($x:expr, $n:expr) => {
-        VERIFY_CHECK((($x) >> ($n)) == 0)
+        VERIFY_CHECK!((($x) >> ($n)) == 0)
     };
 }
 #[cfg(not(feature="verify"))] 

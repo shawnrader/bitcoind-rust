@@ -795,7 +795,7 @@ pub fn secp256k1_scalar_split_128(r1: &mut secp256k1_scalar, r2: &mut secp256k1_
 // SECP256K1_INLINE static int secp256k1_scalar_eq(const secp256k1_scalar *a, const secp256k1_scalar *b) {
 //     return ((a->d[0] ^ b->d[0]) | (a->d[1] ^ b->d[1]) | (a->d[2] ^ b->d[2]) | (a->d[3] ^ b->d[3])) == 0;
 // }
-fn secp256k1_scalar_eq(a: &secp256k1_scalar, b: &secp256k1_scalar) -> i32 {
+pub fn secp256k1_scalar_eq(a: &secp256k1_scalar, b: &secp256k1_scalar) -> i32 {
     (((a.d[0] ^ b.d[0]) | (a.d[1] ^ b.d[1]) | (a.d[2] ^ b.d[2]) | (a.d[3] ^ b.d[3])) == 0) as i32
 }
 

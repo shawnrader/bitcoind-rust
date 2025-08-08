@@ -6,7 +6,7 @@
 
 #![allow(warnings)]
 use super::field_5x52::*;
-use crate::{SECP256K1_FE_STORAGE_CONST_GET, SECP256K1_FE_CONST_INNER, SECP256K1_FE_CONST, SECP256K1_FE_STORAGE_CONST};
+use crate::{SECP256K1_FE_STORAGE_CONST_GET, SECP256K1_FE_CONST_INNER, SECP256K1_FE_CONST, SECP256K1_FE_STORAGE_CONST, VERIFY_CHECK};
 use super::field::*;
 use super::ecmult_gen::{secp256k1_fe_one, secp256k1_const_beta};
 
@@ -224,7 +224,7 @@ const secp256k1_fe_const_b: secp256k1_fe = SECP256K1_FE_CONST!(0, 0, 0, 0, 0, 0,
 pub fn secp256k1_ge_set_gej_zinv(r: &mut secp256k1_ge, a: &secp256k1_gej, zi: &secp256k1_fe) {
     let mut zi2 = secp256k1_fe::new();
     let mut zi3 = secp256k1_fe::new();
-    //VERIFY_CHECK(!a->infinity);
+    VERIFY_CHECK!(a.infinity == 0);
     secp256k1_fe_sqr(&mut zi2, zi);
     secp256k1_fe_mul(&mut zi3, &zi2, zi);
     secp256k1_fe_mul(&mut r.x, &a.x, &zi2);
@@ -324,7 +324,7 @@ fn secp256k1_ge_set_all_gej_var(r: &mut [secp256k1_ge], a: &[secp256k1_gej], len
             last_i = i;
         }
     }
-    #[cfg(feature = "verify")] VERIFY_CHECK(!a[last_i].infinity);
+    #[cfg(feature = "verify")] VERIFY_CHECK!(!a[last_i].infinity == 1);
     r[last_i].x = u;
 
     for i in 0..len {

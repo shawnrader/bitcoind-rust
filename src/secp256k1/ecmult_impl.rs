@@ -22,6 +22,7 @@ use super::*;
 use super::util::secp256k1_callback;
 use super::scratch::secp256k1_scratch;
 use super::scalar_impl::secp256k1_scalar_split_lambda;
+use crate::{VERIFY_CHECK};
 
 pub type secp256k1_ecmult_multi_callback = fn(&secp256k1_scalar, &secp256k1_ge, usize, &[u8]) -> i32;
 
@@ -183,7 +184,7 @@ pub fn secp256k1_ecmult_odd_multiples_table(n: i32, pre_a: &mut [secp256k1_ge], 
     let mut d_ge = secp256k1_ge::new();
     let mut i: i32;
 
-    VERIFY_CHECK!(!a.infinity);
+    VERIFY_CHECK!(a.infinity == 0);
 
     secp256k1_gej_double_var(&mut d, a, None);
 
@@ -363,7 +364,6 @@ fn secp256k1_ecmult_wnaf(wnaf: &mut [i32], len: i32, a: &secp256k1_scalar, w: i3
     let mut carry: i32 = 0;
 
     VERIFY_CHECK!(wnaf.len() > 0 && wnaf.len() <= 256);
-    VERIFY_CHECK!(a != NULL);
     VERIFY_CHECK!(2 <= w && w <= 31);
 
     wnaf.iter_mut().for_each(|x| *x = 0);
@@ -401,7 +401,7 @@ fn secp256k1_ecmult_wnaf(wnaf: &mut [i32], len: i32, a: &secp256k1_scalar, w: i3
 
     VERIFY_CHECK!(carry == 0);
     while bit < 256 {
-        VERIFY_CHECK!(secp256k1_scalar_get_bits(&s, bit) == 0);
+        VERIFY_CHECK!(secp256k1_scalar_get_bits(&s, bit as u32, 1) == 0);
         bit += 1;
     }
 
